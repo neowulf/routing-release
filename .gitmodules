@@ -1,7 +1,3 @@
-[submodule "src/code.cloudfoundry.org/cf-tcp-router"]
-	path = src/code.cloudfoundry.org/cf-tcp-router
-	url = https://github.com/cloudfoundry/cf-tcp-router
-	branch = main
 [submodule "src/code.cloudfoundry.org/routing-api"]
 	path = src/code.cloudfoundry.org/routing-api
 	url = https://github.com/cloudfoundry/routing-api
@@ -10,20 +6,9 @@
 	path = src/code.cloudfoundry.org/routing-info
 	url = https://github.com/cloudfoundry/routing-info
 	branch = main
-[submodule "src/code.cloudfoundry.org/routing-api-cli"]
-	path = src/code.cloudfoundry.org/routing-api-cli
-	url = https://github.com/cloudfoundry/routing-api-cli
-	branch = main
-[submodule "src/code.cloudfoundry.org/cf-routing-test-helpers"]
-	path = src/code.cloudfoundry.org/cf-routing-test-helpers
-	url = https://github.com/cloudfoundry/cf-routing-test-helpers
 [submodule "src/code.cloudfoundry.org/gorouter"]
 	path = src/code.cloudfoundry.org/gorouter
 	url = https://github.com/cloudfoundry/gorouter
-	branch = main
-[submodule "src/code.cloudfoundry.org/routing-acceptance-tests"]
-	path = src/code.cloudfoundry.org/routing-acceptance-tests
-	url = https://github.com/cloudfoundry/routing-acceptance-tests
 	branch = main
 [submodule "src/code.cloudfoundry.org/route-registrar"]
 	path = src/code.cloudfoundry.org/route-registrar

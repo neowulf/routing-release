@@ -1,0 +1,67 @@
+package smoke_test
+
+import (
+	"context"
+	"os"
+	"time"
+
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"code.cloudfoundry.org/routing-acceptance-tests/helpers"
+	routing_api "code.cloudfoundry.org/routing-api"
+	cfworkflow_helpers "github.com/cloudfoundry/cf-test-helpers/v2/workflowhelpers"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gexec"
+
+	"testing"
+)
+
+var (
+	DEFAULT_TIMEOUT          = 2 * time.Minute
+	DEFAULT_POLLING_INTERVAL = 5 * time.Second
+	CF_PUSH_TIMEOUT          = 2 * time.Minute
+	routingConfig            helpers.RoutingConfig
+	environment              *cfworkflow_helpers.ReproducibleTestSuiteSetup
+)
+
+func TestSmokeTests(t *testing.T) {
+	routingConfig = helpers.LoadConfig()
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "SmokeTestsSuite")
+}
+
+var _ = BeforeSuite(func() {
+	if routingConfig.DefaultTimeoutDuration() > 0 {
+		DEFAULT_TIMEOUT = routingConfig.DefaultTimeoutDuration()
+	}
+
+	if routingConfig.CfPushTimeoutDuration() > 0 {
+		CF_PUSH_TIMEOUT = routingConfig.CfPushTimeoutDuration()
+	}
+
+	os.Setenv("CF_TRACE", "true")
+	environment = cfworkflow_helpers.NewTestSuiteSetup(routingConfig)
+	adminContext = environment.AdminUserContext()
+	regUser := environment.RegularUserContext()
+	adminContext.TestSpace = regUser.TestSpace
+	adminContext.Org = regUser.Org
+	adminContext.Space = regUser.Space
+	environment.Setup()
+
+	logger := lagertest.NewTestLogger("test")
+	routingApiClient := routing_api.NewClient(routingConfig.RoutingApiUrl, routingConfig.SkipSSLValidation)
+
+	uaaTokenFetcher := helpers.NewTokenFetcher(routingConfig, logger)
+	token, err := uaaTokenFetcher.FetchToken(context.Background(), true)
+	Expect(err).ToNot(HaveOccurred())
+
+	routingApiClient.SetToken(token.AccessToken)
+	_, err = routingApiClient.Routes()
+	Expect(err).ToNot(HaveOccurred(), "Routing API is unavailable")
+	helpers.ValidateRouterGroupName(adminContext, routingConfig.TCPRouterGroup)
+})
+
+var _ = AfterSuite(func() {
+	environment.Teardown()
+	CleanupBuildArtifacts()
+})
