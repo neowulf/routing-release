@@ -6,9 +6,6 @@
 	path = src/code.cloudfoundry.org/routing-info
 	url = https://github.com/cloudfoundry/routing-info
 	branch = main
-[submodule "src/code.cloudfoundry.org/cf-routing-test-helpers"]
-	path = src/code.cloudfoundry.org/cf-routing-test-helpers
-	url = https://github.com/cloudfoundry/cf-routing-test-helpers
 [submodule "src/code.cloudfoundry.org/gorouter"]
 	path = src/code.cloudfoundry.org/gorouter
 	url = https://github.com/cloudfoundry/gorouter
