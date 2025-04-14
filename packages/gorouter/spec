@@ -170,6 +170,7 @@ files:
   - code.cloudfoundry.org/vendor/github.com/prometheus/client_golang/prometheus/collectors/*.go # gosub
   - code.cloudfoundry.org/vendor/github.com/prometheus/client_golang/prometheus/internal/*.go # gosub
   - code.cloudfoundry.org/vendor/github.com/prometheus/client_golang/prometheus/promhttp/*.go # gosub
+  - code.cloudfoundry.org/vendor/github.com/prometheus/client_golang/prometheus/promhttp/internal/*.go # gosub
   - code.cloudfoundry.org/vendor/github.com/prometheus/client_model/go/*.go # gosub
   - code.cloudfoundry.org/vendor/github.com/prometheus/common/expfmt/*.go # gosub
   - code.cloudfoundry.org/vendor/github.com/prometheus/common/model/*.go # gosub
