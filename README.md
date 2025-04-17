@@ -9,6 +9,8 @@ for [CF Deployment](https://github.com/cloudfoundry/cf-deployment).
 
 # Docs
 
+-   [Usage](./docs/01-routing-acceptance-tests-usage.md)
+-   [Usage](./docs/01-routing-api-cli-usage.md)
 -   [How To Add a New Route
     Option](./docs/03-how-to-add-new-route-option.md)
 -   [How To enable Quotas for TCP
