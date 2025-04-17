@@ -6,26 +6,26 @@ code.cloudfoundry.org/bbs/encryption
 code.cloudfoundry.org/bbs/format
 code.cloudfoundry.org/bbs/guidprovider
 code.cloudfoundry.org/bbs/models
-# code.cloudfoundry.org/cfhttp/v2 v2.41.0
+# code.cloudfoundry.org/cfhttp/v2 v2.42.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/cfhttp/v2
-# code.cloudfoundry.org/clock v1.34.0
+# code.cloudfoundry.org/clock v1.35.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/debugserver v0.45.0
+# code.cloudfoundry.org/debugserver v0.46.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/diego-logging-client v0.50.0
+# code.cloudfoundry.org/diego-logging-client v0.51.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/diego-logging-client
-# code.cloudfoundry.org/durationjson v0.37.0
+# code.cloudfoundry.org/durationjson v0.38.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/durationjson
-# code.cloudfoundry.org/eventhub v0.36.0
+# code.cloudfoundry.org/eventhub v0.37.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/eventhub
-# code.cloudfoundry.org/go-diodes v0.0.0-20250407090537-96fce8693346
+# code.cloudfoundry.org/go-diodes v0.0.0-20250417050917-333c2580673b
 ## explicit; go 1.23.0
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-loggregator/v9 v9.2.1
@@ -33,19 +33,19 @@ code.cloudfoundry.org/go-diodes
 code.cloudfoundry.org/go-loggregator/v9
 code.cloudfoundry.org/go-loggregator/v9/rpc/loggregator_v2
 code.cloudfoundry.org/go-loggregator/v9/runtimeemitter
-# code.cloudfoundry.org/go-metric-registry v0.0.0-20250408103124-b19f887641df
+# code.cloudfoundry.org/go-metric-registry v0.0.0-20250415080734-befb1e0c7ea9
 ## explicit; go 1.23.0
 code.cloudfoundry.org/go-metric-registry
 # code.cloudfoundry.org/inigo v0.0.0-20210615140442-4bdc4f6e44d5
 ## explicit
-# code.cloudfoundry.org/lager/v3 v3.33.0
+# code.cloudfoundry.org/lager/v3 v3.34.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagerflags
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.36.0
+# code.cloudfoundry.org/localip v0.37.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/localip
 # code.cloudfoundry.org/locket v0.0.0-20250312193944-994ce54b9bd5
@@ -168,7 +168,7 @@ github.com/google/go-cmp/cmp/internal/value
 github.com/google/go-tpm/legacy/tpm2
 github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/tbs
-# github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
+# github.com/google/pprof v0.0.0-20250417170025-a87c506f3220
 ## explicit; go 1.23
 github.com/google/pprof/profile
 # github.com/honeycombio/libhoney-go v1.25.0
@@ -237,8 +237,8 @@ github.com/minio/highwayhash
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/nats-io/jwt/v2 v2.7.3
-## explicit; go 1.22
+# github.com/nats-io/jwt/v2 v2.7.4
+## explicit; go 1.23.0
 github.com/nats-io/jwt/v2
 # github.com/nats-io/nats-server/v2 v2.11.1
 ## explicit; go 1.23.0
@@ -257,14 +257,14 @@ github.com/nats-io/nats-server/v2/server/stree
 github.com/nats-io/nats-server/v2/server/sysmem
 github.com/nats-io/nats-server/v2/server/thw
 github.com/nats-io/nats-server/v2/server/tpm
-# github.com/nats-io/nats.go v1.41.1
+# github.com/nats-io/nats.go v1.41.2
 ## explicit; go 1.23.0
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
 github.com/nats-io/nats.go/internal/parser
 github.com/nats-io/nats.go/util
-# github.com/nats-io/nkeys v0.4.10
-## explicit; go 1.20
+# github.com/nats-io/nkeys v0.4.11
+## explicit; go 1.23.0
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 ## explicit
@@ -378,7 +378,7 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
-# go.step.sm/crypto v0.60.0
+# go.step.sm/crypto v0.61.0
 ## explicit; go 1.23.0
 go.step.sm/crypto/fingerprint
 go.step.sm/crypto/internal/bcrypt_pbkdf
