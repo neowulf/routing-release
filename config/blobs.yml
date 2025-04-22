@@ -1,7 +1,7 @@
-haproxy/haproxy-2.8.14.tar.gz:
-  size: 4411140
-  object_id: 2f5db483-015a-4a12-5e48-6bd6b90d9d86
-  sha: sha256:47984506d0cd477d5c6a7d7ba2adaf0039ca27af970bf76384855a7f1c22773c
+haproxy/haproxy-2.8.15.tar.gz:
+  size: 4418838
+  object_id: d1947f55-a47f-4f6d-70bf-06e685a96e12
+  sha: sha256:98f0551b9c3041a87869f4cd4e1465adf6fbef2056e83aabea92106032585242
 jq/jq-1.7.1-linux-amd64.tgz:
   size: 991581
   object_id: eb04fe34-4a0f-4d28-7aeb-6bae9f5fad47
