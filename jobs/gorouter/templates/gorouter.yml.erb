@@ -138,6 +138,8 @@ params = {
   'drain_timeout' => "#{p('router.drain_timeout')}s",
   'healthcheck_user_agent' => p('router.healthcheck_user_agent'),
   'endpoint_timeout' => "#{p('request_timeout_in_seconds')}s",
+  'http_1_endpoint_timeout' => "#{p('http_1_request_timeout_in_seconds')}s",
+  'http_2_endpoint_timeout' => "#{p('http_2_request_timeout_in_seconds')}s", 
   'endpoint_dial_timeout' => "#{p('endpoint_dial_timeout_in_seconds')}s",
   'websocket_dial_timeout' => "#{p('websocket_dial_timeout_in_seconds') != "endpoint_dial_timeout_in_seconds" ? p('websocket_dial_timeout_in_seconds') : p('endpoint_dial_timeout_in_seconds')}s",
   'tls_handshake_timeout' => "#{p('tls_handshake_timeout_in_seconds')}s",

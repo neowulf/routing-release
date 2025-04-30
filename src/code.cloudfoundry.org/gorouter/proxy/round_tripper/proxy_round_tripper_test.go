@@ -1802,8 +1802,57 @@ var _ = Describe("ProxyRoundTripper", func() {
 					})
 
 				})
-			})
+				Context("when http/1 endpoint timeout is not 0", func() {
+					BeforeEach(func() {
+						cfg.Http1EndpointTimeout = 20 * time.Millisecond
+						transport.RoundTripStub = func(req *http.Request) (*http.Response, error) {
+							reqCh <- req
+							return &http.Response{}, nil
+						}
+					})
+					It("sets a http/1 timeout on the request context", func() {
+						proxyRoundTripper.RoundTrip(req)
+						var request *http.Request
+						Eventually(reqCh).Should(Receive(&request))
 
+						deadLine, deadlineSet := request.Context().Deadline()
+						Expect(deadlineSet).To(BeTrue())
+						Expect(deadLine).To(BeTemporally("~", time.Now().Add(20*time.Millisecond), 11*time.Millisecond))
+						Eventually(func() string {
+							err := request.Context().Err()
+							if err != nil {
+								return err.Error()
+							}
+							return ""
+						}).Should(ContainSubstring("deadline exceeded"))
+					})
+				})
+				Context("when http/2 endpoint timeout is not 0", func() {
+					BeforeEach(func() {
+						cfg.Http2EndpointTimeout = 15 * time.Millisecond
+						transport.RoundTripStub = func(req *http.Request) (*http.Response, error) {
+							reqCh <- req
+							return &http.Response{}, nil
+						}
+					})
+					It("sets a http/2 timeout on the request context", func() {
+						proxyRoundTripper.RoundTrip(req)
+						var request *http.Request
+						Eventually(reqCh).Should(Receive(&request))
+
+						deadLine, deadlineSet := request.Context().Deadline()
+						Expect(deadlineSet).To(BeTrue())
+						Expect(deadLine).To(BeTemporally("~", time.Now().Add(15*time.Millisecond), 6*time.Millisecond))
+						Eventually(func() string {
+							err := request.Context().Err()
+							if err != nil {
+								return err.Error()
+							}
+							return ""
+						}).Should(ContainSubstring("deadline exceeded"))
+					})
+				})
+			})
 			Context("CancelRequest", func() {
 				It("can cancel requests", func() {
 					reqInfo.RouteEndpoint = endpoint

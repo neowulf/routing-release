@@ -386,7 +386,7 @@ func (rt *roundTripper) backendRoundTrip(request *http.Request, endpoint *route.
 }
 
 func (rt *roundTripper) timedRoundTrip(tr http.RoundTripper, request *http.Request, logger *slog.Logger) (*http.Response, error) {
-	if rt.config.EndpointTimeout <= 0 || handlers.IsWebSocketUpgrade(request) {
+	if rt.getEndpointTimeout(request) <= 0 || handlers.IsWebSocketUpgrade(request) {
 		return tr.RoundTrip(request)
 	}
 
@@ -412,7 +412,21 @@ func (rt *roundTripper) timedRoundTrip(tr http.RoundTripper, request *http.Reque
 
 	return resp, err
 }
-
+func (rt *roundTripper) getEndpointTimeout(request *http.Request) time.Duration {
+	httpProtoMajor := request.ProtoMajor
+	endpointTimeout := rt.config.EndpointTimeout
+	switch httpProtoMajor {
+	case 2:
+		if rt.config.Http2EndpointTimeout != 0 {
+			endpointTimeout = rt.config.Http2EndpointTimeout
+		}
+	case 1:
+		if rt.config.Http1EndpointTimeout != 0 {
+			endpointTimeout = rt.config.Http1EndpointTimeout
+		}
+	}
+	return endpointTimeout
+}
 func (rt *roundTripper) selectEndpoint(iter route.EndpointIterator, attempt int) (*route.Endpoint, error) {
 	endpoint := iter.Next(attempt)
 	if endpoint == nil {

@@ -239,6 +239,8 @@ describe 'gorouter' do
         },
         'golang' => {},
         'request_timeout_in_seconds' => 100,
+        'http_1_request_timeout_in_seconds' => 100,
+        'http_2_request_timeout_in_seconds' => 100,
         'endpoint_dial_timeout_in_seconds' => 6,
         # the websocket_dial_timeout_in_seconds will default to the value of endpoint_dial_timeout_in_seconds if not set
         'tls_handshake_timeout_in_seconds' => 9,
@@ -719,6 +721,8 @@ describe 'gorouter' do
           expect(parsed_yaml['websocket_dial_timeout']).to eq('6s')
           expect(parsed_yaml['tls_handshake_timeout']).to eq('9s')
           expect(parsed_yaml['endpoint_timeout']).to eq('100s')
+          expect(parsed_yaml['http_1_endpoint_timeout']).to eq('100s')
+          expect(parsed_yaml['http_2_endpoint_timeout']).to eq('100s')
         end
       end
 

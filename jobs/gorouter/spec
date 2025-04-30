@@ -523,6 +523,16 @@ properties:
       Requests from router to backend endpoints that are longer than this duration will be canceled and logged as
       `backend-request-timeout` errors. If set to 0 this timeout is disabled.
     default: 900
+  http_1_request_timeout_in_seconds:
+    description: |
+      The amount of time HTTP/1 requests from the Gorouter to apps are allowed to live before being canceled. 
+      Enter value in seconds. Set to -1 to disable timeouts. If set to 0, it inherits the value from request_timeout_in_seconds.
+    default: 0
+  http_2_request_timeout_in_seconds:
+    description: |
+      The amount of time HTTP/2 requests from the Gorouter to apps are allowed to live before being canceled. 
+      Enter value in seconds. Set to -1 to disable timeouts. If set to 0, it inherits the value from request_timeout_in_seconds.
+    default: 0
   endpoint_dial_timeout_in_seconds:
     description: |
       Maximum time in seconds for gorouter to establish a TCP connection with a backend. This timeout comes before `tls_handshake_timeout_in_seconds`
