@@ -9,9 +9,9 @@ replace github.com/cactus/go-statsd-client => github.com/cactus/go-statsd-client
 require (
 	code.cloudfoundry.org/cfhttp/v2 v2.45.0
 	code.cloudfoundry.org/clock v1.38.0
-	code.cloudfoundry.org/debugserver v0.49.0
+	code.cloudfoundry.org/debugserver v0.50.0
 	code.cloudfoundry.org/eventhub v0.40.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20250505164318-1214ddd8e016
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20250512163413-c16153523050
 	code.cloudfoundry.org/lager/v3 v3.37.0
 	code.cloudfoundry.org/localip v0.40.0
 	code.cloudfoundry.org/locket v0.0.0-20250423181647-b2b48694f201
@@ -47,14 +47,14 @@ require (
 	golang.org/x/net v0.40.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/tools v0.33.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	code.cloudfoundry.org/bbs v0.0.0-20250414163106-a163a3b524d2 // indirect
-	code.cloudfoundry.org/diego-logging-client v0.54.0 // indirect
+	code.cloudfoundry.org/diego-logging-client v0.55.0 // indirect
 	code.cloudfoundry.org/durationjson v0.41.0 // indirect
 	code.cloudfoundry.org/go-diodes v0.0.0-20250505082646-e4c2d772c2ec // indirect
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.63.0 // indirect
+	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/square/certstrap v1.3.0 // indirect
@@ -102,6 +102,6 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250505200425-f936aa4a68b2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
