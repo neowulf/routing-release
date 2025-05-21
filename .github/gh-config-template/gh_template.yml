@@ -1,13 +1,11 @@
 #@ load("@ytt:data", "data")
 #@ load("ytt-helpers.star", "helpers")
-
 name: unit-integration-tests
 
 on:
-  push:
-    branches:
-      - develop
-  pull_request:
+  pull_request_target:
+    types:
+      - labeled
 
 env:
   MAPPING: |
@@ -34,13 +32,14 @@ env:
 
 jobs:
   repo-clone:
+    if: github.event.label.name == 'ready-to-run'
     runs-on: ubuntu-latest
     steps:
       - name: routing-release-repo
         uses: actions/checkout@v4
         with:
-          repository: cloudfoundry/routing-release.git
-          ref: github-action
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           submodules: recursive
           path: repo
       - name: Check out wg-appruntime code
@@ -63,7 +62,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: cloudfoundry/tas-runtime-mysql-5.7
+      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-build
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -77,15 +79,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: cloudfoundry/tas-runtime-mysql-5.7
+      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-mysql-5.7
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
           name: repo
     - run: |
-           tar -xzvf repo-artifact.tar.gz
-           tar -xzvf ci-artifact.tar.gz 
+          tar -xzvf repo-artifact.tar.gz
+          tar -xzvf ci-artifact.tar.gz 
     - name: build binaries
       run: |
         export DEFAULT_PARAMS="${GITHUB_WORKSPACE}/ci/routing-release/default-params/build-binaries/linux.yml"
@@ -103,7 +108,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: cloudfoundry/tas-runtime-build
+      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-build
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -128,7 +136,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: cloudfoundry/tas-runtime-postgres
+      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-postgres
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -153,7 +164,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: cloudfoundry/tas-runtime-mysql-8.0
+      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-mysql-8.0
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
