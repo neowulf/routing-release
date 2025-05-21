@@ -2,7 +2,7 @@ name: unit-integration-tests
 on:
   pull_request_target:
     types:
-      - labeled
+    - labeled
 env:
   MAPPING: |
     build_nats_server=src/code.cloudfoundry.org/vendor/github.com/nats-io/nats-server/v2
@@ -101,14 +101,12 @@ jobs:
         DIR: src/code.cloudfoundry.org/cf-tcp-router
         DB: mysql
       run: |
-        "${GITHUB_WORKSPACE}"/ci/routing-release/helpers/configure-binaries.bash
         "${GITHUB_WORKSPACE}"/ci/shared/tasks/run-bin-test/task.bash --keep-going --trace -r --fail-on-pending --randomize-all --nodes=7 --race --timeout 30m --flake-attempts 2
     - name: routing-api-mysql
       env:
         DIR: src/code.cloudfoundry.org/routing-api
         DB: mysql
       run: |
-        "${GITHUB_WORKSPACE}"/ci/routing-release/helpers/configure-binaries.bash
         "${GITHUB_WORKSPACE}"/ci/shared/tasks/run-bin-test/task.bash --keep-going --trace -r --fail-on-pending --randomize-all --nodes=7 --race --timeout 30m --flake-attempts 2
   test-repos-withoutdb:
     runs-on: ubuntu-latest
