@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/gorouter/logadapter"
 	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/debugserver"
-	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/tlsconfig"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -102,11 +102,16 @@ func main() {
 	}
 
 	if c.DebugAddr != "" {
-		reconfigurableSink := lager.ReconfigurableSink{}
-		_, err = debugserver.Run(c.DebugAddr, &reconfigurableSink)
+		sink := logadapter.NewZapLevelSink(logger)
+		_, err = debugserver.Run(c.DebugAddr, sink)
 		if err != nil {
 			logger.Error("failed-to-start-debug-server", grlog.ErrAttr(err))
 		}
+		logger.Info("debugserver-started",
+			slog.String("address", c.DebugAddr),
+			slog.String("log_level", c.Logging.Level),
+			slog.String("log_format", c.Logging.Format.Timestamp),
+		)
 	}
 
 	logger.Info("setting-up-nats-connection")

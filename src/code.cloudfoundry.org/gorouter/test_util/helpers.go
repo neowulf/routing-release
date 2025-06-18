@@ -691,3 +691,50 @@ func CreateCertAndAddCA(cn CertNames, cp *x509.CertPool) CertChain {
 	cp.AddCert(certChain.CACert)
 	return certChain
 }
+
+// CreateInvalidCertAndRule creates a certificate chain with a leaf and CA certificate,
+// where the leaf certificate has a common name (CN) and the CA certificate is used to
+// sign the leaf. The rule is built with mismatched valid subjects that do not match the
+// leaf certificate's common name.
+func CreateInvalidCertAndRule(cn string, invalidSubjects []string) ([]*x509.Certificate, config.VerifyClientCertificateMetadataRule, error) {
+	// Create signed cert + root CA
+	certChain := CreateSignedCertWithRootCA(CertNames{
+		CommonName: cn,
+	})
+
+	// Parse the leaf certificate from PEM
+	block, _ := pem.Decode(certChain.CertPEM)
+	if block == nil {
+		return nil, config.VerifyClientCertificateMetadataRule{}, fmt.Errorf("failed to decode cert PEM")
+	}
+	x509Leaf, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, config.VerifyClientCertificateMetadataRule{}, fmt.Errorf("failed to parse leaf cert: %w", err)
+	}
+	x509Leaf.IsCA = false
+
+	// Parse the CA certificate from PEM
+	block, _ = pem.Decode(certChain.CACertPEM)
+	if block == nil {
+		return nil, config.VerifyClientCertificateMetadataRule{}, fmt.Errorf("failed to decode CA cert PEM")
+	}
+	x509CA, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, config.VerifyClientCertificateMetadataRule{}, fmt.Errorf("failed to parse CA cert: %w", err)
+	}
+
+	// Build rule with mismatched valid subjects
+	validSubjects := make([]config.CertSubject, len(invalidSubjects))
+	for i, subj := range invalidSubjects {
+		validSubjects[i] = config.CertSubject{CommonName: subj}
+	}
+
+	// Use actual CA subject to make the rule apply
+	rule := config.VerifyClientCertificateMetadataRule{
+		CASubject:     config.CertSubject{CommonName: x509CA.Subject.CommonName},
+		ValidSubjects: validSubjects,
+	}
+
+	// Return leaf + CA in chain
+	return []*x509.Certificate{x509Leaf, x509CA}, rule, nil
+}

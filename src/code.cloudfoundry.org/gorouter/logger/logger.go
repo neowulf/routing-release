@@ -20,9 +20,8 @@ var (
 	mutex       sync.Mutex
 )
 
-/*
-dynamicLoggingConfig holds dynamic configuration for the time encoding and logging level.
-*/
+// dynamicLoggingConfig holds dynamic configuration for the time encoding and logging level.
+
 type dynamicLoggingConfig struct {
 	encoding string
 	level    zap.AtomicLevel
@@ -98,6 +97,12 @@ func SetLoggingLevel(level string) {
 	conf.level.SetLevel(zapLevel)
 }
 
+// GetLoggingLevel returns the current logging level.
+func GetLoggingLevel() string {
+	return conf.level.String()
+}
+
+// Logger is an interface that can be used to mock the logger in tests.
 type Logger interface {
 }
 
@@ -135,9 +140,7 @@ func initializeLogger() *slog.Logger {
 	return slogFrontend
 }
 
-/*
-ErrAttr is creating an slog.String attribute with 'error' key and the provided error message as value.
-*/
+// ErrAttr is creating an slog.String attribute with 'error' key and the provided error message as value.
 func ErrAttr(err error) slog.Attr {
 	return slog.String("error", err.Error())
 }
@@ -150,9 +153,7 @@ func StructValue(obj any) StructWithLogValue {
 	return StructWithLogValue{Value: obj}
 }
 
-/*
-StructWithLogValue implements LogValue(), which allows lazy execution.
-*/
+// StructWithLogValue implements LogValue(), which allows lazy execution.
 type StructWithLogValue struct {
 	Value any
 }
@@ -211,9 +212,7 @@ func CreateLoggerWithSource(prefix string, component string) *slog.Logger {
 	return baseLogger.With(slog.String("source", appendix)).WithGroup("data")
 }
 
-/*
-CreateLogger returns a copy of the logger. All subsequent log statements will be nested in the 'data' field.
-*/
+// CreateLogger returns a copy of the logger. All subsequent log statements will be nested in the 'data' field.
 func CreateLogger() *slog.Logger {
 	if baseLogger == nil {
 		panic("logger is not initialized")
