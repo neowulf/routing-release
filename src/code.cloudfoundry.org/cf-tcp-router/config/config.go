@@ -33,6 +33,14 @@ type OAuthConfig struct {
 	CACerts           string `yaml:"ca_certs"`
 }
 
+type FrontendTLSConfig struct {
+	Enabled bool `yaml:"enabled"`
+	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5.1-crt
+	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#3.12-load
+	// TODO does this string need to end with a forward slash?
+	CertificatePath string `yaml:"cert_path"`
+}
+
 type BackendTLSConfig struct {
 	Enabled              bool   `yaml:"enabled"`
 	CACertificatePath    string `yaml:"ca_cert_path"`
@@ -40,13 +48,14 @@ type BackendTLSConfig struct {
 }
 
 type Config struct {
-	OAuth                        OAuthConfig      `yaml:"oauth"`
-	RoutingAPI                   RoutingAPIConfig `yaml:"routing_api"`
-	HaProxyPidFile               string           `yaml:"haproxy_pid_file"`
-	IsolationSegments            []string         `yaml:"isolation_segments"`
-	ReservedSystemComponentPorts []uint16         `yaml:"reserved_system_component_ports"`
-	DrainWaitDuration            time.Duration    `yaml:"drain_wait"`
-	BackendTLS                   BackendTLSConfig `yaml:"backend_tls"`
+	OAuth                        OAuthConfig       `yaml:"oauth"`
+	RoutingAPI                   RoutingAPIConfig  `yaml:"routing_api"`
+	HaProxyPidFile               string            `yaml:"haproxy_pid_file"`
+	IsolationSegments            []string          `yaml:"isolation_segments"`
+	ReservedSystemComponentPorts []uint16          `yaml:"reserved_system_component_ports"`
+	DrainWaitDuration            time.Duration     `yaml:"drain_wait"`
+	BackendTLS                   BackendTLSConfig  `yaml:"backend_tls"`
+	FrontendTLS                  FrontendTLSConfig `yaml:"frontend_tls"`
 }
 
 const DrainWaitDefault = 20 * time.Second

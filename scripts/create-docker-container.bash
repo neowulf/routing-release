@@ -47,4 +47,3 @@ docker run -it \
   ${ARGS} \
   "${IMAGE}" \
   /bin/bash
-  

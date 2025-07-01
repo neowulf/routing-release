@@ -17,19 +17,23 @@ type RoutingKey struct {
 }
 
 type BackendServerInfo struct {
-	Address         string
-	Port            uint16
-	TLSPort         int
-	InstanceID      string
-	ModificationTag routing_api_models.ModificationTag
-	TTL             int
+	Address              string
+	Port                 uint16
+	TLSPort              int
+	InstanceID           string
+	ModificationTag      routing_api_models.ModificationTag
+	TTL                  int
+	TerminateFrontendTLS bool
+	ALPN                 string
 }
 
 type BackendServerKey struct {
-	Address    string
-	Port       uint16
-	TLSPort    int
-	InstanceID string
+	Address              string
+	Port                 uint16
+	TLSPort              int
+	InstanceID           string
+	TerminateFrontendTLS bool
+	ALPN                 string
 }
 
 type BackendServerDetails struct {
@@ -52,7 +56,7 @@ func NewRoutingTableEntry(backends []BackendServerInfo) RoutingTableEntry {
 		Backends: make(map[BackendServerKey]BackendServerDetails),
 	}
 	for _, backend := range backends {
-		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID}
+		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID, TerminateFrontendTLS: backend.TerminateFrontendTLS, ALPN: backend.ALPN}
 		backendServerDetails := BackendServerDetails{ModificationTag: backend.ModificationTag, TTL: backend.TTL, UpdatedTime: time.Now()}
 
 		routingTableEntry.Backends[backendServerKey] = backendServerDetails
@@ -118,10 +122,10 @@ func (table RoutingTable) PruneEntries(defaultTTL int) {
 }
 
 func (table RoutingTable) serverKeyDetailsFromInfo(info BackendServerInfo) (BackendServerKey, BackendServerDetails) {
-	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
+	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID, TerminateFrontendTLS: info.TerminateFrontendTLS, ALPN: info.ALPN}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
 }
 
-// Returns true if routing configuration should be modified, false if it should not.
+// Set returns true if routing configuration should be modified, false if it should not.
 func (table RoutingTable) Set(key RoutingKey, newEntry RoutingTableEntry) bool {
 	existingEntry, ok := table.Entries[key]
 	if ok && reflect.DeepEqual(existingEntry, newEntry) {
@@ -131,7 +135,7 @@ func (table RoutingTable) Set(key RoutingKey, newEntry RoutingTableEntry) bool {
 	return true
 }
 
-// Returns true if routing configuration should be modified, false if it should not.
+// UpsertBackendServerKey returns true if routing configuration should be modified, false if it should not.
 func (table RoutingTable) UpsertBackendServerKey(key RoutingKey, info BackendServerInfo) bool {
 	logger := table.logger.Session("upsert-backend", lager.Data{"key": key, "info": info})
 

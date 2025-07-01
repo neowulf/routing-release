@@ -305,18 +305,8 @@ var _ = Describe("Main", func() {
 				)
 
 				tcpEvent = routing_api.TcpEvent{
-					Action: "Upsert",
-					TcpRouteMapping: models.NewTcpRouteMapping(
-						"some-guid",
-						1234,
-						"some-ip",
-						6789,
-						6790,
-						"instance-guid",
-						nil,
-						0,
-						models.ModificationTag{},
-					),
+					Action:          "Upsert",
+					TcpRouteMapping: models.NewTcpRouteMapping("some-guid", 1234, "some-ip", 6789, 6790, "instance-guid", nil, 0, models.ModificationTag{}, false, nil),
 				}
 
 				tcpEventString, err = json.Marshal(tcpEvent.TcpRouteMapping)

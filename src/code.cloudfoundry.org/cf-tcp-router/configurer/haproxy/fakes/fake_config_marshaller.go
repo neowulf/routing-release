@@ -26,7 +26,7 @@ type FakeConfigMarshaller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigMarshaller) Marshal(arg1 models.HAProxyConfig, arg2 config.BackendTLSConfig) string {
+func (fake *FakeConfigMarshaller) Marshal(arg1 models.HAProxyConfig, arg2 config.BackendTLSConfig, tlsConfig config.FrontendTLSConfig) string {
 	fake.marshalMutex.Lock()
 	ret, specificReturn := fake.marshalReturnsOnCall[len(fake.marshalArgsForCall)]
 	fake.marshalArgsForCall = append(fake.marshalArgsForCall, struct {

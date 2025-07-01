@@ -86,6 +86,29 @@ func (hf HAProxyFrontend) ContainsSNIRoutes() bool {
 	return false
 }
 
+func (hf HAProxyFrontend) TerminateFrontendTLS() bool {
+	for _, backends := range hf {
+		for _, backend := range backends {
+			if backend.TerminateFrontendTLS {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (hf HAProxyFrontend) CollectALPNs() []string {
+	result := make([]string, 0)
+	for _, backends := range hf {
+		for _, backend := range backends {
+			if backend.ALPN != "" {
+				result = append(result, backend.ALPN)
+			}
+		}
+	}
+	return result
+}
+
 // Stolen with gratitude from https://github.com/asaskevich/govalidator/blob/v11/patterns.go#L33
 var validDNSNameRegexp = regexp.MustCompile(`^([a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62}){1}(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*[\._]?$`)
 

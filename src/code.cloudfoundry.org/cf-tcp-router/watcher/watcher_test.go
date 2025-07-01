@@ -84,18 +84,8 @@ var _ = Describe("Watcher", func() {
 
 		BeforeEach(func() {
 			tcpEvent = routing_api.TcpEvent{
-				TcpRouteMapping: models.NewTcpRouteMapping(
-					routerGroupGuid,
-					61000,
-					"some-ip-1",
-					5222,
-					0,
-					"",
-					nil,
-					0,
-					models.ModificationTag{},
-				),
-				Action: "Upsert",
+				TcpRouteMapping: models.NewTcpRouteMapping(routerGroupGuid, 61000, "some-ip-1", 5222, 0, "", nil, 0, models.ModificationTag{}, false, nil),
+				Action:          "Upsert",
 			}
 			eventSource.NextReturns(tcpEvent, nil)
 		})
@@ -114,18 +104,8 @@ var _ = Describe("Watcher", func() {
 
 		BeforeEach(func() {
 			tcpEvent = routing_api.TcpEvent{
-				TcpRouteMapping: models.NewTcpRouteMapping(
-					routerGroupGuid,
-					61000,
-					"some-ip-1",
-					5222,
-					0,
-					"",
-					nil,
-					0,
-					models.ModificationTag{},
-				),
-				Action: "Delete",
+				TcpRouteMapping: models.NewTcpRouteMapping(routerGroupGuid, 61000, "some-ip-1", 5222, 0, "", nil, 0, models.ModificationTag{}, false, nil),
+				Action:          "Delete",
 			}
 			eventSource.NextReturns(tcpEvent, nil)
 		})
@@ -237,18 +217,8 @@ var _ = Describe("Watcher", func() {
 				return nil
 			}
 			tcpEvent := routing_api.TcpEvent{
-				TcpRouteMapping: models.NewTcpRouteMapping(
-					routerGroupGuid,
-					61000,
-					"some-ip-1",
-					5222,
-					5223,
-					"instance-id",
-					nil,
-					0,
-					models.ModificationTag{},
-				),
-				Action: "Upsert",
+				TcpRouteMapping: models.NewTcpRouteMapping(routerGroupGuid, 61000, "some-ip-1", 5222, 5223, "instance-id", nil, 0, models.ModificationTag{}, false, nil),
+				Action:          "Upsert",
 			}
 			eventSource.NextReturns(tcpEvent, nil)
 
@@ -299,18 +269,8 @@ var _ = Describe("Watcher", func() {
 		Context("when sending events after a drain has started", func() {
 			BeforeEach(func() {
 				tcpEvent := routing_api.TcpEvent{
-					TcpRouteMapping: models.NewTcpRouteMapping(
-						routerGroupGuid,
-						61000,
-						"some-ip-1",
-						5222,
-						5223,
-						"instance-id",
-						nil,
-						0,
-						models.ModificationTag{},
-					),
-					Action: "Upsert",
+					TcpRouteMapping: models.NewTcpRouteMapping(routerGroupGuid, 61000, "some-ip-1", 5222, 5223, "instance-id", nil, 0, models.ModificationTag{}, false, nil),
+					Action:          "Upsert",
 				}
 				eventSource.NextReturns(tcpEvent, nil)
 			})

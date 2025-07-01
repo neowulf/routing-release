@@ -123,7 +123,7 @@ func (u *updater) Sync() {
 		freshRoutingTable := models.NewRoutingTableWithSession(logger, "fresh-routing-table")
 
 		for _, routeMapping := range tcpRouteMappings {
-			routingKey, backendServerInfo := u.toRoutingTableEntry(logger, routeMapping)
+			routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
 			logger.Debug("creating-routing-table-entry", lager.Data{"key": routingKey, "value": backendServerInfo})
 			if u.routingTable.UpsertBackendServerKey(routingKey, backendServerInfo) {
 				tableChanged = true
@@ -226,7 +226,7 @@ func (u *updater) handleEvent(l lager.Logger, event routing_api.TcpEvent) (bool,
 	}
 }
 
-func (u *updater) toRoutingTableEntry(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (models.RoutingKey, models.BackendServerInfo) {
+func ToRoutingTableEntry(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (models.RoutingKey, models.BackendServerInfo) {
 	logger.Debug("converting-tcp-route-mapping", lager.Data{"tcp-route": routeMapping})
 
 	var hostname string
@@ -244,19 +244,31 @@ func (u *updater) toRoutingTableEntry(logger lager.Logger, routeMapping apimodel
 		ttl = *routeMapping.TTL
 	}
 
+	var terminateFrontendTLS bool
+	if routeMapping.TerminateFrontendTLS != nil {
+		terminateFrontendTLS = *routeMapping.TerminateFrontendTLS
+	}
+
+	var alpn string
+	if routeMapping.ALPN != nil {
+		alpn = *routeMapping.ALPN
+	}
+
 	backendServerInfo := models.BackendServerInfo{
-		Address:         routeMapping.HostIP,
-		Port:            routeMapping.HostPort,
-		TLSPort:         routeMapping.HostTLSPort,
-		InstanceID:      routeMapping.InstanceId,
-		ModificationTag: routeMapping.ModificationTag,
-		TTL:             ttl,
+		Address:              routeMapping.HostIP,
+		Port:                 routeMapping.HostPort,
+		TLSPort:              routeMapping.HostTLSPort,
+		InstanceID:           routeMapping.InstanceId,
+		ModificationTag:      routeMapping.ModificationTag,
+		TTL:                  ttl,
+		TerminateFrontendTLS: terminateFrontendTLS,
+		ALPN:                 alpn,
 	}
 	return routingKey, backendServerInfo
 }
 
 func (u *updater) handleUpsert(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (bool, error) {
-	routingKey, backendServerInfo := u.toRoutingTableEntry(logger, routeMapping)
+	routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
 	tableChanged := u.routingTable.UpsertBackendServerKey(routingKey, backendServerInfo)
 	if tableChanged && !u.syncing {
 		logger.Debug("calling-configurer")
@@ -267,7 +279,7 @@ func (u *updater) handleUpsert(logger lager.Logger, routeMapping apimodels.TcpRo
 }
 
 func (u *updater) handleDelete(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (bool, error) {
-	routingKey, backendServerInfo := u.toRoutingTableEntry(logger, routeMapping)
+	routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
 
 	tableChanged := u.routingTable.DeleteBackendServerKey(routingKey, backendServerInfo)
 	if tableChanged && !u.syncing {
