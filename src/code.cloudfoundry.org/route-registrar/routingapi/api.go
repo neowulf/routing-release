@@ -92,6 +92,8 @@ func (r *RoutingAPI) makeTcpRouteMapping(route config.Route) (models.TcpRouteMap
 		nilIfEmpty(&route.ServerCertDomainSAN),
 		calculateTTL(route.RegistrationInterval, r.routingAPIMaxTTL),
 		models.ModificationTag{},
+		false,
+		"",
 	), nil
 }
 

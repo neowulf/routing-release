@@ -25,11 +25,12 @@ type Configurer struct {
 	configFilePath     string
 	configFileLock     *sync.Mutex
 	backendTlsCfg      config.BackendTLSConfig
+	frontendTlsCfg     config.FrontendTLSConfig
 	monitor            monitor.Monitor
 	scriptRunner       ScriptRunner
 }
 
-func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig) (*Configurer, error) {
+func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) (*Configurer, error) {
 	if !utils.FileExists(baseConfigFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, baseConfigFilePath)
 	}
@@ -44,6 +45,8 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.ClientCertAndKeyPath)
 	}
 
+	// TODO: add validation for frontend tls config
+
 	return &Configurer{
 		logger:             logger,
 		configMarshaller:   configMarshaller,
@@ -51,6 +54,7 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 		configFilePath:     configFilePath,
 		configFileLock:     new(sync.Mutex),
 		backendTlsCfg:      backendTlsCfg,
+		frontendTlsCfg:     frontendTlsCfg,
 		monitor:            monitor,
 		scriptRunner:       scriptRunner,
 	}, nil
@@ -79,7 +83,7 @@ func (h *Configurer) Configure(routingTable models.RoutingTable, forceHealthChec
 	}
 
 	haproxyConf := models.NewHAProxyConfig(routingTable, h.logger)
-	marshalledConf := h.configMarshaller.Marshal(haproxyConf, h.backendTlsCfg)
+	marshalledConf := h.configMarshaller.Marshal(haproxyConf, h.backendTlsCfg, h.frontendTlsCfg)
 
 	_, err = buff.Write([]byte(marshalledConf))
 	if err != nil {

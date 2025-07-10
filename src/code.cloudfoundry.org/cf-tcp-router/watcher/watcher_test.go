@@ -94,6 +94,8 @@ var _ = Describe("Watcher", func() {
 					nil,
 					0,
 					models.ModificationTag{},
+					false,
+					"",
 				),
 				Action: "Upsert",
 			}
@@ -124,6 +126,8 @@ var _ = Describe("Watcher", func() {
 					nil,
 					0,
 					models.ModificationTag{},
+					false,
+					"",
 				),
 				Action: "Delete",
 			}
@@ -247,6 +251,8 @@ var _ = Describe("Watcher", func() {
 					nil,
 					0,
 					models.ModificationTag{},
+					false,
+					"",
 				),
 				Action: "Upsert",
 			}
@@ -309,6 +315,8 @@ var _ = Describe("Watcher", func() {
 						nil,
 						0,
 						models.ModificationTag{},
+						false,
+						"",
 					),
 					Action: "Upsert",
 				}

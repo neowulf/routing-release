@@ -124,6 +124,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						modificationTag,
+						false,
+						"",
 					)
 					tcpEvent = routing_api.TcpEvent{
 						TcpRouteMapping: mapping,
@@ -167,6 +169,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							newTTL,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -199,6 +203,8 @@ var _ = Describe("Updater", func() {
 								nil,
 								newTTL,
 								newModificationTag,
+								false,
+								"",
 							)
 							tcpEvent = routing_api.TcpEvent{
 								TcpRouteMapping: mapping,
@@ -234,6 +240,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -289,6 +297,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						newModificationTag,
+						false,
+						"",
 					)
 					tcpEvent = routing_api.TcpEvent{
 						TcpRouteMapping: mapping,
@@ -329,6 +339,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -385,6 +397,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -430,6 +444,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -478,6 +494,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -489,6 +507,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -500,6 +520,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -511,6 +533,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 			}
 		})
@@ -589,6 +613,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 						apimodels.NewTcpRouteMapping(
 							routerGroupGuid,
@@ -600,6 +626,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					}
 
@@ -672,6 +700,8 @@ var _ = Describe("Updater", func() {
 								nil,
 								0,
 								modificationTag,
+								false,
+								"",
 							),
 							Action: "Upsert",
 						}
@@ -712,6 +742,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							0,
 							modificationTag,
+							false,
+							"",
 						),
 						Action: "Delete",
 					}
@@ -800,6 +832,8 @@ var _ = Describe("Updater", func() {
 									nil,
 									22,
 									apimodels.ModificationTag{Guid: "guid-1", Index: 1},
+									false,
+									"",
 								),
 								Action: "Upsert",
 							}
@@ -838,6 +872,8 @@ var _ = Describe("Updater", func() {
 									nil,
 									22,
 									newModificationTag,
+									false,
+									"",
 								),
 								Action: "Upsert",
 							}
@@ -1137,6 +1173,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						modificationTag,
+						false,
+						"",
 					),
 				}
 				fakeRoutingApiClient.TcpRouteMappingsReturns(tcpMappings, nil)
@@ -1167,6 +1205,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					}
 					fakeRoutingApiClient.TcpRouteMappingsReturns(tcpMappings, nil)
@@ -1198,6 +1238,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -1227,6 +1269,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					})
 					Expect(err).NotTo(HaveOccurred())

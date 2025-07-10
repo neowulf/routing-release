@@ -173,6 +173,7 @@ func main() {
 		monitor,
 		reloaderRunner,
 		cfg.BackendTLS,
+		cfg.FrontendTLS,
 	)
 
 	// Reap child processes to prevent zombies when running in a container (BPM)

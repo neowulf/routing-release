@@ -26,6 +26,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 			haproxyConfigurer *haproxy.Configurer
 			fakeMonitor       *monitorFakes.FakeMonitor
 			backendTlsCfg     config.BackendTLSConfig
+			frontendTlsCfg    config.FrontendTLSConfig
 		)
 
 		BeforeEach(func() {
@@ -34,12 +35,13 @@ var _ = Describe("HaproxyConfigurer", func() {
 			backendTlsCfg = config.BackendTLSConfig{
 				CACertificatePath: caFile,
 			}
+			frontendTlsCfg = config.FrontendTLSConfig{}
 
 		})
 
 		Context("when empty base configuration file is passed", func() {
 			It("returns a ErrRouterConfigFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), "", haproxyConfigFile, fakeMonitor, nil, backendTlsCfg)
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), "", haproxyConfigFile, fakeMonitor, nil, backendTlsCfg, frontendTlsCfg)
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(haproxy.ErrRouterConfigFileNotFound))
 			})
@@ -47,7 +49,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 		Context("when empty configuration file is passed", func() {
 			It("returns a ErrRouterConfigFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, "", fakeMonitor, nil, backendTlsCfg)
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, "", fakeMonitor, nil, backendTlsCfg, frontendTlsCfg)
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(haproxy.ErrRouterConfigFileNotFound))
 			})
@@ -55,7 +57,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 		Context("when an empty CA file path is passed", func() {
 			It("does not return a ErrRouterCAFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, haproxyConfigFile, fakeMonitor, nil, config.BackendTLSConfig{})
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, haproxyConfigFile, fakeMonitor, nil, config.BackendTLSConfig{}, frontendTlsCfg)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -63,7 +65,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 		Context("when base configuration file does not exist", func() {
 			It("returns a ErrRouterConfigFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), "file/path/does/not/exist", haproxyConfigFile, fakeMonitor, nil, backendTlsCfg)
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), "file/path/does/not/exist", haproxyConfigFile, fakeMonitor, nil, backendTlsCfg, frontendTlsCfg)
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(haproxy.ErrRouterConfigFileNotFound))
 			})
@@ -71,7 +73,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 		Context("when the CA file path does not exist", func() {
 			It("returns a ErrRouterCAFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, haproxyConfigFile, fakeMonitor, nil, config.BackendTLSConfig{CACertificatePath: "file/path/does/not/exist"})
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, haproxyConfigFile, fakeMonitor, nil, config.BackendTLSConfig{CACertificatePath: "file/path/does/not/exist"}, frontendTlsCfg)
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(haproxy.ErrRouterCAFileNotFound))
 			})
@@ -80,7 +82,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 		Context("when configuration file does not exist", func() {
 			It("returns a ErrRouterConfigFileNotFound error", func() {
-				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, "file/path/does/not/exist", fakeMonitor, nil, backendTlsCfg)
+				_, err := haproxy.NewHaProxyConfigurer(logger, haproxy.NewConfigMarshaller(logger), haproxyConfigTemplate, "file/path/does/not/exist", fakeMonitor, nil, backendTlsCfg, frontendTlsCfg)
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(haproxy.ErrRouterConfigFileNotFound))
 			})
@@ -113,7 +115,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 
 				fakeMarshaller = new(fakes.FakeConfigMarshaller)
 				fakeScriptRunner = new(fakes.FakeScriptRunner)
-				haproxyConfigurer, err = haproxy.NewHaProxyConfigurer(logger, fakeMarshaller, haproxyConfigTemplate, generatedHaproxyCfgFile, fakeMonitor, fakeScriptRunner, backendTlsCfg)
+				haproxyConfigurer, err = haproxy.NewHaProxyConfigurer(logger, fakeMarshaller, haproxyConfigTemplate, generatedHaproxyCfgFile, fakeMonitor, fakeScriptRunner, backendTlsCfg, frontendTlsCfg)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				fakeMarshaller.MarshalCalls(func(haproxyConf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig) string {

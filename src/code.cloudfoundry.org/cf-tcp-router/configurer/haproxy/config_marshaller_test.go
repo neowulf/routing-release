@@ -4,8 +4,11 @@ import (
 	"code.cloudfoundry.org/cf-tcp-router/config"
 	"code.cloudfoundry.org/cf-tcp-router/configurer/haproxy"
 	"code.cloudfoundry.org/cf-tcp-router/models"
+	"code.cloudfoundry.org/cf-tcp-router/routing_table"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
+	apimodels "code.cloudfoundry.org/routing-api/models"
+	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -14,10 +17,11 @@ import (
 var _ = Describe("ConfigMarshaller", func() {
 	Describe("Marshal", func() {
 		var (
-			haproxyConf   models.HAProxyConfig
-			marshaller    haproxy.ConfigMarshaller
-			logger        lager.Logger
-			backendTlsCfg config.BackendTLSConfig
+			haproxyConf    models.HAProxyConfig
+			marshaller     haproxy.ConfigMarshaller
+			logger         lager.Logger
+			backendTlsCfg  config.BackendTLSConfig
+			frontendTlsCfg config.FrontendTLSConfig
 		)
 
 		BeforeEach(func() {
@@ -27,6 +31,10 @@ var _ = Describe("ConfigMarshaller", func() {
 			backendTlsCfg = config.BackendTLSConfig{
 				Enabled:           false,
 				CACertificatePath: "/fake/path/to/ca.pem",
+			}
+			frontendTlsCfg = config.FrontendTLSConfig{
+				Enabled:         false,
+				CertificatePath: "/fake/path/to/certs/",
 			}
 		})
 
@@ -38,7 +46,7 @@ var _ = Describe("ConfigMarshaller", func() {
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -59,7 +67,7 @@ backend backend_80
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -82,7 +90,7 @@ backend backend_80_external-host.example.com
 						"external-host.example.com": {{Address: "sni-host.internal", Port: 9090}},
 					},
 				}
-				actual := marshaller.Marshal(haproxyConf, backendTlsCfg)
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 				Expect(actual).To(Equal(`
 frontend frontend_80
   mode tcp
@@ -116,7 +124,7 @@ backend backend_80_external-host.example.com
 						"": {{Address: "host-80.internal", Port: 8080}},
 					},
 				}
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_70
   mode tcp
   bind :70
@@ -157,7 +165,7 @@ backend backend_90
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -193,7 +201,7 @@ backend backend_80_host-99.example.com
 						},
 					},
 				}
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -221,7 +229,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -245,7 +253,7 @@ backend backend_80
 								},
 							},
 						}
-						Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+						Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -268,7 +276,7 @@ backend backend_80
 							},
 						},
 					}
-					marshaller.Marshal(haproxyConf, backendTlsCfg)
+					marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 					Expect(logger).To(gbytes.Say("route-missing-tls-information"))
 				})
 				It("uses the non-tls backend port", func() {
@@ -279,7 +287,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -300,7 +308,7 @@ backend backend_80
 							},
 						},
 					}
-					marshaller.Marshal(haproxyConf, backendTlsCfg)
+					marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 					Expect(logger).NotTo(gbytes.Say("route-missing-tls-information"))
 				})
 				It("uses the non-tls backend port", func() {
@@ -311,7 +319,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -336,7 +344,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false})).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -350,4 +358,155 @@ backend backend_80
 			})
 		})
 	})
+
+	Describe("Marshal to appropriate HAProxy stanza", func() {
+		Context("Given a TCP Route Mapping", func() {
+			It("for a simple route", func() {
+				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8888,
+						HostIP:          "88.0.0.36",
+						InstanceId:      "host-88-instance-id",
+						ExternalPort:    1025,
+					}},
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8889,
+						HostIP:          "88.0.0.37",
+						InstanceId:      "host-89-instance-id",
+						ExternalPort:    1025,
+					}},
+				})
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025
+  default_backend backend_1025
+
+backend backend_1025
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+  server server_88.0.0.37_8889 88.0.0.37:8889
+`))
+			})
+
+			It("for a route with TLS terminating at the router", func() {
+				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8888,
+						HostIP:          "88.0.0.36",
+						InstanceId:      "host-88-instance-id",
+						ExternalPort:    1025,
+
+						SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
+						TerminateFrontendTLS: true,
+					}},
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8889,
+						HostIP:          "88.0.0.37",
+						InstanceId:      "host-89-instance-id",
+						ExternalPort:    1025,
+
+						SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
+						TerminateFrontendTLS: true,
+					}},
+				})
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889
+`))
+
+			})
+		})
+		It("for a route with TLS terminating at the router and starting another TLS session with backend", func() {
+			actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
+				{TcpMappingEntity: apimodels.TcpMappingEntity{
+					RouterGroupGuid: "foobar",
+					HostPort:        8888,
+					HostIP:          "88.0.0.36",
+					InstanceId:      "host-88-instance-id",
+					ExternalPort:    1025,
+
+					HostTLSPort:          8888,
+					SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
+					TerminateFrontendTLS: true,
+				}},
+				{TcpMappingEntity: apimodels.TcpMappingEntity{
+					RouterGroupGuid: "foobar",
+					HostPort:        8889,
+					HostIP:          "88.0.0.37",
+					InstanceId:      "host-89-instance-id",
+					ExternalPort:    1025,
+
+					HostTLSPort:          8889,
+					SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
+					TerminateFrontendTLS: true,
+				}},
+				// TODO add bind ssl crt
+			})
+			Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888 ssl verify required verifyhost host-88-instance-id ca-file /fake/path/to/ca.pem
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
+`))
+
+		})
+	})
 })
+
+func getHAProxyStanza(routeMappings []apimodels.TcpRouteMapping) string {
+	logger = lagertest.NewTestLogger("config-marshaller-test")
+
+	routingTable := models.NewRoutingTable(logger)
+	for _, routeMapping := range routeMappings {
+		routingKey, backendServerInfo := routing_table.ToRoutingTableEntry(logger, routeMapping)
+		routingTable.UpsertBackendServerKey(routingKey, backendServerInfo)
+	}
+	haproxyConf := models.NewHAProxyConfig(routingTable, logger)
+
+	marshaller := haproxy.NewConfigMarshaller(logger)
+	backendTlsCfg := config.BackendTLSConfig{
+		Enabled:           true,
+		CACertificatePath: "/fake/path/to/ca.pem",
+	}
+	frontendTlsCfg := config.FrontendTLSConfig{
+		Enabled:         true,
+		CertificatePath: "/fake/path/to/certs/",
+	}
+	stanza := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+	fmt.Println(stanza)
+
+	return stanza
+}
+
+func Ptr[V string | bool](v V) *V {
+	return &v
+}
