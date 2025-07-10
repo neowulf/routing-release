@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu
+set -e
 set -o pipefail
 
 THIS_FILE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -36,7 +36,7 @@ fi
 
 docker pull "${IMAGE}"
 docker rm -f "${CONTAINER_NAME}" || true # needed for compatibility with podman
-docker run -it \
+docker run \
   --env "DB=${DB}" \
   --env "REPO_NAME=$REPO_NAME" \
   --env "REPO_PATH=/repo" \
