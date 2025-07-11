@@ -8,10 +8,10 @@ import (
 	"code.cloudfoundry.org/route-registrar/config"
 	"golang.org/x/oauth2"
 
+	routing_api "code.cloudfoundry.org/routing-api"
 	"code.cloudfoundry.org/routing-api/models"
 
 	"code.cloudfoundry.org/lager/v3"
-	routing_api "code.cloudfoundry.org/routing-api"
 )
 
 type RoutingAPI struct {
@@ -92,8 +92,8 @@ func (r *RoutingAPI) makeTcpRouteMapping(route config.Route) (models.TcpRouteMap
 		nilIfEmpty(&route.ServerCertDomainSAN),
 		calculateTTL(route.RegistrationInterval, r.routingAPIMaxTTL),
 		models.ModificationTag{},
-		false,
-		"",
+		route.GetTerminateFrontendTLS(),
+		route.GetALPN(),
 	), nil
 }
 

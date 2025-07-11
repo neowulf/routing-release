@@ -61,4 +61,50 @@ var _ = Describe("Routing API", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tcpRouteMapping.SniHostname).To(BeNil())
 	})
+
+	It("Sets TerminateFrontendTLS if TerminateFrontendTLS is present.", func() {
+		tcpRouteMapping, err := api.makeTcpRouteMapping(config.Route{
+			Port:         &port,
+			ExternalPort: &externalPort,
+			Options: &config.Options{
+				TerminateFrontendTLS: true,
+			},
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tcpRouteMapping.TerminateFrontendTLS).To(BeTrue())
+	})
+
+	It("Sets TerminateFrontendTLS if TerminateFrontendTLS is not present.", func() {
+		tcpRouteMapping, err := api.makeTcpRouteMapping(config.Route{
+			Port:         &port,
+			ExternalPort: &externalPort,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tcpRouteMapping.TerminateFrontendTLS).To(BeFalse())
+	})
+
+	It("Sets ALPN if ALPNs are present.", func() {
+		tcpRouteMapping, err := api.makeTcpRouteMapping(config.Route{
+			Port:         &port,
+			ExternalPort: &externalPort,
+			Options: &config.Options{
+				ALPN: []string{"alpn1", "alpn2"},
+			},
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tcpRouteMapping.ALPN).To(Equal("alpn1,alpn2"))
+	})
+
+	It("ALPN empty if ALPN is not present.", func() {
+		tcpRouteMapping, err := api.makeTcpRouteMapping(config.Route{
+			Port:         &port,
+			ExternalPort: &externalPort,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tcpRouteMapping.ALPN).To(BeEmpty())
+	})
 })

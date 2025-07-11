@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/multierror"
@@ -70,6 +71,8 @@ type RouteSchema struct {
 
 type Options struct {
 	LoadBalancingAlgorithm LoadBalancingAlgorithm `json:"loadbalancing,omitempty" yaml:"loadbalancing,omitempty"`
+	TerminateFrontendTLS   bool                   `json:"terminate_frontend_tls,omitempty" yaml:"terminate_frontend_tls,omitempty"`
+	ALPN                   []string               `json:"alpns,omitempty" yaml:"alpns,omitempty"`
 }
 
 type LoadBalancingAlgorithm string
@@ -360,6 +363,21 @@ func RouteFromSchema(r RouteSchema, index int, host string) (*Route, error) {
 		route.Type = "tcp"
 	}
 	return &route, nil
+}
+
+func (r *Route) GetALPN() string {
+	if r.Options != nil && r.Options.ALPN != nil {
+		return strings.Join(r.Options.ALPN, ",")
+	}
+
+	return ""
+}
+
+func (r *Route) GetTerminateFrontendTLS() bool {
+	if r.Options != nil {
+		return r.Options.TerminateFrontendTLS
+	}
+	return false
 }
 
 func validatePerRouteLoadBalancingAlgorithm(loadBalancingAlgo LoadBalancingAlgorithm) error {

@@ -22,4 +22,7 @@ health_check:
   timeout: 5s
 options: 
   loadbalancing: least-connection
-
+  terminate_frontend_tls: false
+  alpns:
+    - alpn1
+    - alpn2

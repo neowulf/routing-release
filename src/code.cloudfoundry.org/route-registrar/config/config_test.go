@@ -96,6 +96,8 @@ var _ = Describe("Config", func() {
 					ServerCertDomainSAN:  "my.internal.cert",
 					Options: &config.Options{
 						LoadBalancingAlgorithm: config.LeastConns,
+						TerminateFrontendTLS:   false,
+						ALPN:                   []string{"h2", "http/1.1"},
 					},
 				},
 				{
@@ -170,7 +172,7 @@ var _ = Describe("Config", func() {
 			})
 
 			AfterEach(func() {
-				os.Remove(configFile.Name())
+				Expect(os.Remove(configFile.Name())).To(Not(HaveOccurred()))
 			})
 
 			It("returns an error", func() {
@@ -219,6 +221,19 @@ var _ = Describe("Config", func() {
 						ServerCertDomainSAN:  "my.internal.cert",
 						Options: &config.Options{
 							LoadBalancingAlgorithm: config.LeastConns,
+						},
+					},
+					{
+						Name:                 routeName1,
+						TLSPort:              &port1,
+						Protocol:             protocolH1,
+						RegistrationInterval: registrationInterval1String,
+						URIs:                 []string{"my-other-app.my-domain.com"},
+						ServerCertDomainSAN:  "my.internal.cert",
+						Options: &config.Options{
+							LoadBalancingAlgorithm: config.LeastConns,
+							TerminateFrontendTLS:   false,
+							ALPN:                   []string{"alpn1", "alpn2"},
 						},
 					},
 					{
@@ -300,6 +315,20 @@ var _ = Describe("Config", func() {
 						URIs:                 configSchema.Routes[1].URIs,
 						ServerCertDomainSAN:  "my.internal.cert",
 						Options:              &config.Options{LoadBalancingAlgorithm: config.LeastConns},
+					},
+					{
+						Name:                 routeName1,
+						Host:                 "127.0.0.1",
+						TLSPort:              &port1,
+						Protocol:             protocolH1,
+						RegistrationInterval: registrationInterval1,
+						URIs:                 configSchema.Routes[1].URIs,
+						ServerCertDomainSAN:  "my.internal.cert",
+						Options: &config.Options{
+							LoadBalancingAlgorithm: config.LeastConns,
+							TerminateFrontendTLS:   false,
+							ALPN:                   []string{"alpn1", "alpn2"},
+						},
 					},
 					{
 						Name:                 routeName2,
@@ -1329,6 +1358,8 @@ var _ = Describe("Config", func() {
 				ServerCertDomainSAN: "some.service.internal",
 				Options: &config.Options{
 					LoadBalancingAlgorithm: config.LeastConns,
+					TerminateFrontendTLS:   false,
+					ALPN:                   []string{"alpn1", "alpn2"},
 				},
 			}))
 		})

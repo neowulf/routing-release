@@ -17,7 +17,9 @@
         "my-other-app.my-domain.com"
       ],
       "options": {
-        "loadbalancing": "least-connection"
+        "loadbalancing": "least-connection",
+        "terminate_frontend_tls": false,
+        "alpns": ["h2", "http/1.1"]
       },
       "registration_interval": "10s",
       "server_cert_domain_san": "my.internal.cert"
