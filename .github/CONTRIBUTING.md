@@ -39,7 +39,7 @@ Initial Setup
 mkdir -p ~/workspace
 cd ~/workspace
 
-# clone ci
+# clone ci - used by the routing-release's docker container's test scripts
 git clone https://github.com/cloudfoundry/wg-app-platform-runtime-ci.git
 
 # clone repo
