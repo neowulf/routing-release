@@ -200,12 +200,12 @@ var _ = Describe("Config", Serial, func() {
 			Expect(*cfg).To(Equal(expectedCfg))
 		})
 	})
+
 	Context("when drain_wait is a negative number", func() {
 		It("defaults to 20s", func() {
 			cfg, err := config.New("fixtures/negative_drain_wait.yml")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.DrainWaitDuration).To(Equal(20 * time.Second))
-
 		})
 	})
 })
