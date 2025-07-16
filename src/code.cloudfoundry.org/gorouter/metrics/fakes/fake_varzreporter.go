@@ -153,14 +153,6 @@ func (fake *FakeVarzReporter) CaptureRoutingResponseLatencyArgsForCall(i int) (*
 func (fake *FakeVarzReporter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.captureBadGatewayMutex.RLock()
-	defer fake.captureBadGatewayMutex.RUnlock()
-	fake.captureBadRequestMutex.RLock()
-	defer fake.captureBadRequestMutex.RUnlock()
-	fake.captureRoutingRequestMutex.RLock()
-	defer fake.captureRoutingRequestMutex.RUnlock()
-	fake.captureRoutingResponseLatencyMutex.RLock()
-	defer fake.captureRoutingResponseLatencyMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

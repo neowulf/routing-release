@@ -223,12 +223,6 @@ func (fake *FakeEventEmitter) OriginReturnsOnCall(i int, result1 string) {
 func (fake *FakeEventEmitter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.emitMutex.RLock()
-	defer fake.emitMutex.RUnlock()
-	fake.emitEnvelopeMutex.RLock()
-	defer fake.emitEnvelopeMutex.RUnlock()
-	fake.originMutex.RLock()
-	defer fake.originMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

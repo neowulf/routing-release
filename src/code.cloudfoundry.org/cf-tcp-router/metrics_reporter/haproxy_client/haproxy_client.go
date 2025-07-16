@@ -11,7 +11,8 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter -o fakes/fake_haproxy_client.go . HaproxyClient
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_haproxy_client.go . HaproxyClient
 type HaproxyClient interface {
 	GetStats() HaproxyStats
 }

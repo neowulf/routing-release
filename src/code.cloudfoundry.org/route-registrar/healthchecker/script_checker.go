@@ -10,7 +10,8 @@ import (
 	"code.cloudfoundry.org/route-registrar/commandrunner"
 )
 
-//go:generate counterfeiter . HealthChecker
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ./fakes/fake_health_checker.go . HealthChecker
 
 type HealthChecker interface {
 	Check(runner commandrunner.Runner, scriptPath string, timeout time.Duration) (bool, error)

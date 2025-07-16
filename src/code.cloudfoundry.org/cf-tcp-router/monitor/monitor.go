@@ -12,7 +12,8 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter -o fakes/fake_monitor.go . Monitor
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_monitor.go . Monitor
 type Monitor interface {
 	StartWatching()
 	StopWatching()

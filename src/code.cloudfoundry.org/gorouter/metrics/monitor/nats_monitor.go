@@ -9,7 +9,8 @@ import (
 	"code.cloudfoundry.org/gorouter/metrics"
 )
 
-//go:generate counterfeiter -o ../fakes/fake_subscriber.go . Subscriber
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ../fakes/fake_subscriber.go . Subscriber
 type Subscriber interface {
 	Pending() (int, error)
 	Dropped() (int, error)

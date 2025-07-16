@@ -40,7 +40,8 @@ var (
 	TooManyResponseHeaders = errors.New("Too many response headers")
 )
 
-//go:generate counterfeiter -o fakes/fake_proxy_round_tripper.go . ProxyRoundTripper
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_proxy_round_tripper.go . ProxyRoundTripper
 type ProxyRoundTripper interface {
 	http.RoundTripper
 	CancelRequest(*http.Request)
@@ -61,7 +62,7 @@ func GetRoundTripper(endpoint *route.Endpoint, roundTripperFactory RoundTripperF
 	return endpoint.RoundTripper()
 }
 
-//go:generate counterfeiter -o fakes/fake_error_handler.go --fake-name ErrorHandler . errorHandler
+//counterfeiter:generate -o fakes/fake_error_handler.go --fake-name ErrorHandler . errorHandler
 type errorHandler interface {
 	HandleError(utils.ProxyResponseWriter, error)
 }

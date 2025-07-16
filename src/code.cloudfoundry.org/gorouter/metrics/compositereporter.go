@@ -10,7 +10,8 @@ import (
 // Deprecated: this interface is marked for removal. It should be removed upon
 // removal of Varz
 //
-//go:generate counterfeiter -o fakes/fake_varzreporter.go . VarzReporter
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_varzreporter.go . VarzReporter
 type VarzReporter interface {
 	CaptureBadRequest()
 	CaptureBadGateway()
@@ -18,7 +19,7 @@ type VarzReporter interface {
 	CaptureRoutingResponseLatency(b *route.Endpoint, statusCode int, t time.Time, d time.Duration)
 }
 
-//go:generate counterfeiter -o fakes/fake_metricreporter.go . MetricReporter
+//counterfeiter:generate -o fakes/fake_metricreporter.go . MetricReporter
 type MetricReporter interface {
 	CaptureBackendExhaustedConns()
 	CaptureBackendInvalidID()

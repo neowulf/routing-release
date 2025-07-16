@@ -13,7 +13,8 @@ import (
 	"code.cloudfoundry.org/gorouter/test_util"
 )
 
-//go:generate counterfeiter -o fakes/eventemitter.go github.com/cloudfoundry/dropsonde.EventEmitter
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/eventemitter.go github.com/cloudfoundry/dropsonde.EventEmitter
 
 var _ = Describe("DropsondeLogSender", func() {
 	Describe("SendAppLog", func() {

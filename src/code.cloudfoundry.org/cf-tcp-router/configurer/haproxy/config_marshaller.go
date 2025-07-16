@@ -10,7 +10,8 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter -o fakes/fake_config_marshaller.go . ConfigMarshaller
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_config_marshaller.go . ConfigMarshaller
 type ConfigMarshaller interface {
 	Marshal(models.HAProxyConfig, config.BackendTLSConfig) string
 }

@@ -15,7 +15,8 @@ import (
 
 type Signal struct{}
 
-//go:generate counterfeiter -o fakes/fake_client.go . Client
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_client.go . Client
 type Client interface {
 	Subscribe(subj string, cb nats.MsgHandler) (*nats.Subscription, error)
 	Publish(subj string, data []byte) error

@@ -198,14 +198,6 @@ func (fake *FakeEndpointIterator) PreRequestArgsForCall(i int) *route.Endpoint {
 func (fake *FakeEndpointIterator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.endpointFailedMutex.RLock()
-	defer fake.endpointFailedMutex.RUnlock()
-	fake.nextMutex.RLock()
-	defer fake.nextMutex.RUnlock()
-	fake.postRequestMutex.RLock()
-	defer fake.postRequestMutex.RUnlock()
-	fake.preRequestMutex.RLock()
-	defer fake.preRequestMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

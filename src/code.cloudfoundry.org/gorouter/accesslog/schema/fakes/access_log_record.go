@@ -56,8 +56,6 @@ func (fake *FakeLogSender) SendAppLogArgsForCall(i int) (string, string, map[str
 func (fake *FakeLogSender) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.sendAppLogMutex.RLock()
-	defer fake.sendAppLogMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -23,7 +23,8 @@ type RoutingAPI struct {
 	routingAPIMaxTTL time.Duration
 }
 
-//go:generate counterfeiter . uaaClient
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ./fakes/fake_uaa_client.go . uaaClient
 type uaaClient interface {
 	FetchToken(context.Context, bool) (*oauth2.Token, error)
 }

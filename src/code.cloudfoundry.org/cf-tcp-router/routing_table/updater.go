@@ -15,7 +15,8 @@ import (
 	"code.cloudfoundry.org/routing-api/uaaclient"
 )
 
-//go:generate counterfeiter -o fakes/fake_updater.go . Updater
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_updater.go . Updater
 type Updater interface {
 	HandleEvent(event routing_api.TcpEvent) error
 	Sync()

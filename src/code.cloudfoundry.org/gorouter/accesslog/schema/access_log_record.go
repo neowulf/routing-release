@@ -15,7 +15,8 @@ import (
 	"code.cloudfoundry.org/gorouter/route"
 )
 
-//go:generate counterfeiter -o fakes/access_log_record.go . LogSender
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/access_log_record.go . LogSender
 type LogSender interface {
 	SendAppLog(appID, message string, tags map[string]string)
 }

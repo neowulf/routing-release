@@ -318,16 +318,6 @@ func (fake *FakeRegistry) UnregisterArgsForCall(i int) (route.Uri, *route.Endpoi
 func (fake *FakeRegistry) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.lookupMutex.RLock()
-	defer fake.lookupMutex.RUnlock()
-	fake.lookupWithAppInstanceMutex.RLock()
-	defer fake.lookupWithAppInstanceMutex.RUnlock()
-	fake.lookupWithProcessInstanceMutex.RLock()
-	defer fake.lookupWithProcessInstanceMutex.RUnlock()
-	fake.registerMutex.RLock()
-	defer fake.registerMutex.RUnlock()
-	fake.unregisterMutex.RLock()
-	defer fake.unregisterMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

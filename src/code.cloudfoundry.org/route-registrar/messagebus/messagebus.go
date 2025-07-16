@@ -14,7 +14,8 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-//go:generate counterfeiter . MessageBus
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ./fakes/fake_message_bus.go . MessageBus
 
 type MessageBus interface {
 	Connect(servers []config.MessageBusServer, tlsConfig *tls.Config) error

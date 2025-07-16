@@ -15,7 +15,8 @@ import (
 	"code.cloudfoundry.org/gorouter/route"
 )
 
-//go:generate counterfeiter -o fakes/fake_registry.go . Registry
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_registry.go . Registry
 type Registry interface {
 	Register(uri route.Uri, endpoint *route.Endpoint)
 	Unregister(uri route.Uri, endpoint *route.Endpoint)

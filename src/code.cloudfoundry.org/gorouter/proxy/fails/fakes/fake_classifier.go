@@ -87,8 +87,6 @@ func (fake *Classifier) ClassifyReturnsOnCall(i int, result1 bool) {
 func (fake *Classifier) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.classifyMutex.RLock()
-	defer fake.classifyMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -12,7 +12,7 @@ import (
 	log "code.cloudfoundry.org/gorouter/logger"
 )
 
-//go:generate counterfeiter -o fakes/accesslogger.go . AccessLogger
+//counterfeiter:generate -o fakes/accesslogger.go . AccessLogger
 type AccessLogger interface {
 	Run()
 	Stop()

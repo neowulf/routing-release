@@ -130,10 +130,6 @@ func (fake *FakeProxyRoundTripper) RoundTripReturnsOnCall(i int, result1 *http.R
 func (fake *FakeProxyRoundTripper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.cancelRequestMutex.RLock()
-	defer fake.cancelRequestMutex.RUnlock()
-	fake.roundTripMutex.RLock()
-	defer fake.roundTripMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

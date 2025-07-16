@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter -o fakes/fake_script_runner.go . ScriptRunner
+//counterfeiter:generate -o fakes/fake_script_runner.go . ScriptRunner
 type ScriptRunner interface {
 	Run(forceHealthCheckToFail bool) error
 }

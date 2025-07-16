@@ -14,7 +14,8 @@ const (
 	HaProxyConfigurer = "HAProxy"
 )
 
-//go:generate counterfeiter -o fakes/fake_configurer.go . RouterConfigurer
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_configurer.go . RouterConfigurer
 type RouterConfigurer interface {
 	Configure(routingTable models.RoutingTable, forceHealthCheckToFail bool) error
 }

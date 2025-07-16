@@ -91,8 +91,6 @@ func (fake *FakeConfigMarshaller) MarshalReturnsOnCall(i int, result1 string) {
 func (fake *FakeConfigMarshaller) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.marshalMutex.RLock()
-	defer fake.marshalMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

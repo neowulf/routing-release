@@ -29,7 +29,8 @@ import (
 	"code.cloudfoundry.org/gorouter/test_util"
 )
 
-//go:generate counterfeiter -o ../fakes/round_tripper.go --fake-name RoundTripper net/http.RoundTripper
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ../fakes/round_tripper.go --fake-name RoundTripper net/http.RoundTripper
 
 var (
 	r                         *registry.RouteRegistry
