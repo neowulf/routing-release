@@ -118,8 +118,8 @@ var _ = Describe("HaproxyConfigurer", func() {
 				haproxyConfigurer, err = haproxy.NewHaProxyConfigurer(logger, fakeMarshaller, haproxyConfigTemplate, generatedHaproxyCfgFile, fakeMonitor, fakeScriptRunner, backendTlsCfg, frontendTlsCfg)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				fakeMarshaller.MarshalCalls(func(haproxyConf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig) string {
-					return fmt.Sprintf("%s\nca-file-path: %s", marshallerContent, backendTlsCfg.CACertificatePath)
+				fakeMarshaller.MarshalCalls(func(haproxyConf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) string {
+					return fmt.Sprintf("%s\nca-file-path: %s\ncert-file-path: %s", marshallerContent, backendTlsCfg.CACertificatePath, frontendTlsCfg.CertificatePath)
 				})
 			})
 
@@ -140,7 +140,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 					currentConfigTemplateContent, err = os.ReadFile(generatedHaproxyCfgFile)
 					Expect(err).ToNot(HaveOccurred())
 
-					expected := fmt.Sprintf("%s%s\nca-file-path: %s", string(originalConfigTemplateContent), marshallerContent, backendTlsCfg.CACertificatePath)
+					expected := fmt.Sprintf("%s%s\nca-file-path: %s\ncert-file-path: %s", string(originalConfigTemplateContent), marshallerContent, backendTlsCfg.CACertificatePath, frontendTlsCfg.CertificatePath)
 					Expect(string(currentConfigTemplateContent)).To(Equal(expected))
 
 					Expect(fakeMonitor.StopWatchingCallCount()).To(Equal(1))
@@ -161,7 +161,7 @@ var _ = Describe("HaproxyConfigurer", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					// File contains only the most recent copy of marshallerContent
-					expected := fmt.Sprintf("%s%s\nca-file-path: %s", string(originalConfigTemplateContent), marshallerContent, backendTlsCfg.CACertificatePath)
+					expected := fmt.Sprintf("%s%s\nca-file-path: %s\ncert-file-path: %s", string(originalConfigTemplateContent), marshallerContent, backendTlsCfg.CACertificatePath, frontendTlsCfg.CertificatePath)
 					Expect(string(currentConfigTemplateContent)).To(Equal(expected))
 
 					// Restarts after each call, though
