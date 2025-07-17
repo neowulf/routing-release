@@ -213,4 +213,107 @@ var _ = Describe("HAProxyConfig", func() {
 			})
 		})
 	})
+
+	Context("HAProxyFrontend having multiple backends", func() {
+		Context("verify that the HAProxyFrontend will TerminateFrontendTls when one of the backends' frontendTls is true", func() {
+			It("and there is a single SniHostname", func() {
+				frontends := HAProxyFrontend{
+					"foobar.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: true},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(1))
+				Expect(frontends.TerminateFrontendTLS()).To(BeTrue())
+			})
+
+			It("and there are multiple SniHostnames", func() {
+				frontends := HAProxyFrontend{
+					"host.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+					},
+					"foobar.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: true},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(2))
+				Expect(frontends.TerminateFrontendTLS()).To(BeTrue())
+			})
+		})
+
+		Context("verify that the HAProxyFrontend will TerminateFrontendTls when all backends' frontendTls is false", func() {
+			It("and there is a single SniHostname", func() {
+				frontends := HAProxyFrontend{
+					"foobar.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(1))
+				Expect(frontends.TerminateFrontendTLS()).To(BeFalse())
+			})
+
+			It("and there are multiple SniHostnames", func() {
+				frontends := HAProxyFrontend{
+					"host.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+					},
+					"foobar.com": {
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+						HAProxyServer{TerminateFrontendTLS: false},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(2))
+				Expect(frontends.TerminateFrontendTLS()).To(BeFalse())
+			})
+		})
+
+		Context("collect all ALPNs alphabetically from all backends", func() {
+			It("when there is a single SniHostname", func() {
+				frontends := HAProxyFrontend{
+					"foobar.com": {
+						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{},
+						HAProxyServer{ALPN: "alpn1"},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(1))
+				Expect(frontends.CollectALPNs()).To(Equal([]string{"alpn1", "alpn2"}))
+			})
+
+			It("when there are multiple SniHostnames", func() {
+				frontends := HAProxyFrontend{
+					"host.com": {
+						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{},
+						HAProxyServer{ALPN: "alpn1"},
+					},
+					"foobar.com": {
+						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{},
+						HAProxyServer{ALPN: "alpn1"},
+						HAProxyServer{ALPN: "alpn3"},
+					},
+				}
+
+				Expect(frontends).To(HaveLen(2))
+				Expect(frontends.CollectALPNs()).To(Equal([]string{"alpn1", "alpn2", "alpn3"}))
+			})
+		})
+
+	})
 })

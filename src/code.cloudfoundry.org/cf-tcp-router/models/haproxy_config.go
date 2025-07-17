@@ -98,15 +98,22 @@ func (hf HAProxyFrontend) TerminateFrontendTLS() bool {
 }
 
 func (hf HAProxyFrontend) CollectALPNs() []string {
-	result := make([]string, 0)
+	set := make(map[string]struct{})
 	for _, backends := range hf {
 		for _, backend := range backends {
 			if backend.ALPN != "" {
-				result = append(result, backend.ALPN)
+				set[backend.ALPN] = struct{}{}
 			}
 		}
 	}
-	return result
+
+	var keys []string
+	for key := range set {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+	return keys
 }
 
 // Stolen with gratitude from https://github.com/asaskevich/govalidator/blob/v11/patterns.go#L33
