@@ -35,6 +35,11 @@ import (
 	vvarz "code.cloudfoundry.org/gorouter/varz"
 )
 
+// MetricSender
+// MetricBatcher
+//counterfeiter:generate -o ./fakes/fake_response_writer.go net/http.ResponseWriter
+//counterfeiter:generate -o ./fakes/fake_response_writer.go net/http.ResponseWriter
+
 var _ = Describe("Router", func() {
 	var (
 		logger     *test_util.TestLogger

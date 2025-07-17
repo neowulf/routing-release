@@ -12,6 +12,8 @@ var (
 	proxyErrors = ProxyValue("ProxyConnectionErrors")
 )
 
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o fakes/fake_metrics_emitter.go . MetricsEmitter
 type MetricsEmitter interface {
 	Emit(*MetricsReport)
 }

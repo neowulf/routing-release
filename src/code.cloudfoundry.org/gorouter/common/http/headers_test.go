@@ -10,12 +10,15 @@ import (
 	httpfakes "code.cloudfoundry.org/gorouter/common/http/fakes"
 )
 
+//go:generate go tool counterfeiter -generate
+//counterfeiter:generate -o ./fakes/fake_response_writer.go net/http.ResponseWriter
+
 var _ = Describe("Headers", func() {
 	Describe("SetTraceHeaders", func() {
 		var respWriter http.ResponseWriter
 
 		BeforeEach(func() {
-			respWriter = httpfakes.NewFakeResponseWriter()
+			respWriter = &httpfakes.FakeResponseWriter{}
 		})
 
 		JustBeforeEach(func() {
