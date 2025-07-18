@@ -94,10 +94,10 @@ var _ = Describe("Config", func() {
 					RegistrationInterval: registrationInterval1String,
 					URIs:                 []string{"my-other-app.my-domain.com"},
 					ServerCertDomainSAN:  "my.internal.cert",
+					TerminateFrontendTLS: false,
+					ALPNs:                []string{"h2", "http/1.1"},
 					Options: &config.Options{
 						LoadBalancingAlgorithm: config.LeastConns,
-						TerminateFrontendTLS:   false,
-						ALPN:                   []string{"h2", "http/1.1"},
 					},
 				},
 				{
@@ -230,10 +230,10 @@ var _ = Describe("Config", func() {
 						RegistrationInterval: registrationInterval1String,
 						URIs:                 []string{"my-other-app.my-domain.com"},
 						ServerCertDomainSAN:  "my.internal.cert",
+						TerminateFrontendTLS: false,
+						ALPNs:                []string{"alpn1", "alpn2"},
 						Options: &config.Options{
 							LoadBalancingAlgorithm: config.LeastConns,
-							TerminateFrontendTLS:   false,
-							ALPN:                   []string{"alpn1", "alpn2"},
 						},
 					},
 					{
@@ -324,10 +324,10 @@ var _ = Describe("Config", func() {
 						RegistrationInterval: registrationInterval1,
 						URIs:                 configSchema.Routes[1].URIs,
 						ServerCertDomainSAN:  "my.internal.cert",
+						TerminateFrontendTLS: false,
+						ALPNs:                []string{"alpn1", "alpn2"},
 						Options: &config.Options{
 							LoadBalancingAlgorithm: config.LeastConns,
-							TerminateFrontendTLS:   false,
-							ALPN:                   []string{"alpn1", "alpn2"},
 						},
 					},
 					{
@@ -1355,11 +1355,11 @@ var _ = Describe("Config", func() {
 					ScriptPath: "/path/to/check/executable",
 					Timeout:    5 * time.Second,
 				},
-				ServerCertDomainSAN: "some.service.internal",
+				ServerCertDomainSAN:  "some.service.internal",
+				TerminateFrontendTLS: false,
+				ALPNs:                []string{"alpn1", "alpn2"},
 				Options: &config.Options{
 					LoadBalancingAlgorithm: config.LeastConns,
-					TerminateFrontendTLS:   false,
-					ALPN:                   []string{"alpn1", "alpn2"},
 				},
 			}))
 		})
