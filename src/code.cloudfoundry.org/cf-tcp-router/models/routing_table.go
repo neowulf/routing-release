@@ -136,7 +136,7 @@ func (table RoutingTable) Set(key RoutingKey, newEntry RoutingTableEntry) bool {
 }
 
 // UpsertBackendServerKey returns true if routing configuration should be modified, false if it should not.
-func (table RoutingTable) UpsertBackendServerKey(key RoutingKey, info BackendServerInfo) bool {
+func (table RoutingTable) upsertBackendServerKey(key RoutingKey, info BackendServerInfo) bool {
 	logger := table.logger.Session("upsert-backend", lager.Data{"key": key, "info": info})
 
 	existingEntry, routingKeyFound := table.Entries[key]

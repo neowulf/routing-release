@@ -123,13 +123,13 @@ func (u *updater) Sync() {
 		freshRoutingTable := models.NewRoutingTableWithSession(logger, "fresh-routing-table")
 
 		for _, routeMapping := range tcpRouteMappings {
-			routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
+			routingKey, backendServerInfo := toRoutingTableEntry(logger, routeMapping)
 			logger.Debug("creating-routing-table-entry", lager.Data{"key": routingKey, "value": backendServerInfo})
-			if u.routingTable.UpsertBackendServerKey(routingKey, backendServerInfo) {
+			if u.routingTable.upsertBackendServerKey(routingKey, backendServerInfo) {
 				tableChanged = true
 				logger.Debug("change-detected-for-endpoint", lager.Data{"key": routingKey, "value": backendServerInfo})
 			}
-			freshRoutingTable.UpsertBackendServerKey(routingKey, backendServerInfo)
+			freshRoutingTable.upsertBackendServerKey(routingKey, backendServerInfo)
 		}
 
 		if freshRoutingTable.Size() != u.routingTable.Size() {
@@ -226,7 +226,7 @@ func (u *updater) handleEvent(l lager.Logger, event routing_api.TcpEvent) (bool,
 	}
 }
 
-func ToRoutingTableEntry(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (models.RoutingKey, models.BackendServerInfo) {
+func toRoutingTableEntry(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (models.RoutingKey, models.BackendServerInfo) {
 	logger.Debug("converting-tcp-route-mapping", lager.Data{"tcp-route": routeMapping})
 
 	var hostname string
@@ -258,8 +258,8 @@ func ToRoutingTableEntry(logger lager.Logger, routeMapping apimodels.TcpRouteMap
 }
 
 func (u *updater) handleUpsert(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (bool, error) {
-	routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
-	tableChanged := u.routingTable.UpsertBackendServerKey(routingKey, backendServerInfo)
+	routingKey, backendServerInfo := toRoutingTableEntry(logger, routeMapping)
+	tableChanged := u.routingTable.upsertBackendServerKey(routingKey, backendServerInfo)
 	if tableChanged && !u.syncing {
 		logger.Debug("calling-configurer")
 		return true, u.configurer.Configure(*u.routingTable, u.isDraining) // called from HandleEvent which already has a lock, so don't need to use IsDraining() here
@@ -269,7 +269,7 @@ func (u *updater) handleUpsert(logger lager.Logger, routeMapping apimodels.TcpRo
 }
 
 func (u *updater) handleDelete(logger lager.Logger, routeMapping apimodels.TcpRouteMapping) (bool, error) {
-	routingKey, backendServerInfo := ToRoutingTableEntry(logger, routeMapping)
+	routingKey, backendServerInfo := toRoutingTableEntry(logger, routeMapping)
 
 	tableChanged := u.routingTable.DeleteBackendServerKey(routingKey, backendServerInfo)
 	if tableChanged && !u.syncing {

@@ -4,11 +4,8 @@ import (
 	"code.cloudfoundry.org/cf-tcp-router/config"
 	"code.cloudfoundry.org/cf-tcp-router/configurer/haproxy"
 	"code.cloudfoundry.org/cf-tcp-router/models"
-	"code.cloudfoundry.org/cf-tcp-router/routing_table"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	apimodels "code.cloudfoundry.org/routing-api/models"
-	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -336,7 +333,7 @@ backend backend_80
 
 		Context("when backend_tls is disabled", func() {
 			Context("when a TLSPort is provided", func() {
-				It("loggs an error", func() {
+				It("logs an error", func() {
 					haproxyConf = models.HAProxyConfig{
 						80: {
 							"": {
@@ -360,23 +357,19 @@ backend backend_80
 
 		Context("when frontend_tls is disabled", func() {
 			It("for a simple route", func() {
-				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8888,
-						HostIP:          "88.0.0.36",
-						InstanceId:      "host-88-instance-id",
-						ExternalPort:    1025,
-					}},
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8889,
-						HostIP:          "88.0.0.37",
-						InstanceId:      "host-89-instance-id",
-						ExternalPort:    1025,
-					}},
-				})
-				Expect(actual).To(Equal(`
+				//actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025}},
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025}},
+				//})
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id"},
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-88-instance-id"},
+						},
+					},
+				}
+				Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, config.FrontendTLSConfig{Enabled: false})).To(Equal(`
 frontend frontend_1025
   mode tcp
   bind :1025
@@ -391,29 +384,23 @@ backend backend_1025
 		})
 
 		Context("when frontend_tls is enabled", func() {
-			It("for a route with TLS terminating at the router", func() {
-				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8888,
-						HostIP:          "88.0.0.36",
-						InstanceId:      "host-88-instance-id",
-						ExternalPort:    1025,
+			It("for a route with TLS terminating at the router and cleartext to the backend", func() {
+				//[]apimodels.TcpRouteMapping{
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025, SniHostname: Ptr("rmq1.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025, SniHostname: Ptr("rmq2.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
+				//})
 
-						SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
-						TerminateFrontendTLS: true,
-					}},
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8889,
-						HostIP:          "88.0.0.37",
-						InstanceId:      "host-89-instance-id",
-						ExternalPort:    1025,
-
-						SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
-						TerminateFrontendTLS: true,
-					}},
-				})
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, config.FrontendTLSConfig{Enabled: true, CertificatePath: "/fake/path/to/certs/"})
 				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
@@ -435,31 +422,22 @@ backend backend_1025_rmq2.sys.tas.foobar.com
 			})
 
 			It("for a route with TLS terminating at the router and starting another TLS session with backend", func() {
-				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8888,
-						HostIP:          "88.0.0.36",
-						InstanceId:      "host-88-instance-id",
-						ExternalPort:    1025,
+				//[]apimodels.TcpRouteMapping{
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025, HostTLSPort: 8888, SniHostname: Ptr("rmq1.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
+				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025, HostTLSPort: 8889, SniHostname: Ptr("rmq2.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
+				//})
 
-						HostTLSPort:          8888,
-						SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
-						TerminateFrontendTLS: true,
-					}},
-					{TcpMappingEntity: apimodels.TcpMappingEntity{
-						RouterGroupGuid: "foobar",
-						HostPort:        8889,
-						HostIP:          "88.0.0.37",
-						InstanceId:      "host-89-instance-id",
-						ExternalPort:    1025,
-
-						HostTLSPort:          8889,
-						SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
-						TerminateFrontendTLS: true,
-					}},
-					// TODO add bind ssl crt
-				})
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 8888, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 8889, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: true, CACertificatePath: "/fake/path/to/ca.pem"}, config.FrontendTLSConfig{Enabled: true, CertificatePath: "/fake/path/to/certs/"})
 				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
@@ -477,37 +455,7 @@ backend backend_1025_rmq2.sys.tas.foobar.com
   mode tcp
   server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
 `))
-
 			})
 		})
 	})
 })
-
-func getHAProxyStanza(routeMappings []apimodels.TcpRouteMapping) string {
-	logger = lagertest.NewTestLogger("config-marshaller-test")
-
-	routingTable := models.NewRoutingTable(logger)
-	for _, routeMapping := range routeMappings {
-		routingKey, backendServerInfo := routing_table.ToRoutingTableEntry(logger, routeMapping)
-		routingTable.UpsertBackendServerKey(routingKey, backendServerInfo)
-	}
-	haproxyConf := models.NewHAProxyConfig(routingTable, logger)
-
-	marshaller := haproxy.NewConfigMarshaller(logger)
-	backendTlsCfg := config.BackendTLSConfig{
-		Enabled:           true,
-		CACertificatePath: "/fake/path/to/ca.pem",
-	}
-	frontendTlsCfg := config.FrontendTLSConfig{
-		Enabled:         true,
-		CertificatePath: "/fake/path/to/certs/",
-	}
-	stanza := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
-	fmt.Println(stanza)
-
-	return stanza
-}
-
-func Ptr[V string | bool](v V) *V {
-	return &v
-}
