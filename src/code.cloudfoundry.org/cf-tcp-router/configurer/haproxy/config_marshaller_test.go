@@ -357,10 +357,8 @@ backend backend_80
 				})
 			})
 		})
-	})
 
-	Describe("Marshal to appropriate HAProxy stanza", func() {
-		Context("Given a TCP Route Mapping", func() {
+		Context("when frontend_tls is disabled", func() {
 			It("for a simple route", func() {
 				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
 					{TcpMappingEntity: apimodels.TcpMappingEntity{
@@ -390,7 +388,9 @@ backend backend_1025
   server server_88.0.0.37_8889 88.0.0.37:8889
 `))
 			})
+		})
 
+		Context("when frontend_tls is enabled", func() {
 			It("for a route with TLS terminating at the router", func() {
 				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
 					{TcpMappingEntity: apimodels.TcpMappingEntity{
@@ -433,34 +433,34 @@ backend backend_1025_rmq2.sys.tas.foobar.com
 `))
 
 			})
-		})
-		It("for a route with TLS terminating at the router and starting another TLS session with backend", func() {
-			actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
-				{TcpMappingEntity: apimodels.TcpMappingEntity{
-					RouterGroupGuid: "foobar",
-					HostPort:        8888,
-					HostIP:          "88.0.0.36",
-					InstanceId:      "host-88-instance-id",
-					ExternalPort:    1025,
 
-					HostTLSPort:          8888,
-					SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
-					TerminateFrontendTLS: true,
-				}},
-				{TcpMappingEntity: apimodels.TcpMappingEntity{
-					RouterGroupGuid: "foobar",
-					HostPort:        8889,
-					HostIP:          "88.0.0.37",
-					InstanceId:      "host-89-instance-id",
-					ExternalPort:    1025,
+			It("for a route with TLS terminating at the router and starting another TLS session with backend", func() {
+				actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8888,
+						HostIP:          "88.0.0.36",
+						InstanceId:      "host-88-instance-id",
+						ExternalPort:    1025,
 
-					HostTLSPort:          8889,
-					SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
-					TerminateFrontendTLS: true,
-				}},
-				// TODO add bind ssl crt
-			})
-			Expect(actual).To(Equal(`
+						HostTLSPort:          8888,
+						SniHostname:          Ptr("rmq1.sys.tas.foobar.com"),
+						TerminateFrontendTLS: true,
+					}},
+					{TcpMappingEntity: apimodels.TcpMappingEntity{
+						RouterGroupGuid: "foobar",
+						HostPort:        8889,
+						HostIP:          "88.0.0.37",
+						InstanceId:      "host-89-instance-id",
+						ExternalPort:    1025,
+
+						HostTLSPort:          8889,
+						SniHostname:          Ptr("rmq2.sys.tas.foobar.com"),
+						TerminateFrontendTLS: true,
+					}},
+					// TODO add bind ssl crt
+				})
+				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
   bind :1025 ssl crt /fake/path/to/certs/
@@ -478,6 +478,7 @@ backend backend_1025_rmq2.sys.tas.foobar.com
   server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
 `))
 
+			})
 		})
 	})
 })
