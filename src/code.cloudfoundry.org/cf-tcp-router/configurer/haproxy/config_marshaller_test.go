@@ -357,19 +357,17 @@ backend backend_80
 
 		Context("when frontend_tls is disabled", func() {
 			It("for a simple route", func() {
-				//actual := getHAProxyStanza([]apimodels.TcpRouteMapping{
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025}},
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025}},
-				//})
 				haproxyConf = models.HAProxyConfig{
 					1025: {
 						"": {
-							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id"},
-							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-88-instance-id"},
+							{Address: "88.0.0.36", Port: 8888, InstanceID: "host-88-instance-id"},
+							{Address: "88.0.0.37", Port: 8889, InstanceID: "host-89-instance-id"},
 						},
 					},
 				}
-				Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, config.FrontendTLSConfig{Enabled: false})).To(Equal(`
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
   bind :1025
@@ -384,12 +382,11 @@ backend backend_1025
 		})
 
 		Context("when frontend_tls is enabled", func() {
-			It("for a route with TLS terminating at the router and cleartext to the backend", func() {
-				//[]apimodels.TcpRouteMapping{
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025, SniHostname: Ptr("rmq1.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025, SniHostname: Ptr("rmq2.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
-				//})
+			BeforeEach(func() {
+				frontendTlsCfg.Enabled = true
+			})
 
+			It("and backend_tls is disabled", func() {
 				haproxyConf = models.HAProxyConfig{
 					1025: {
 						"rmq1.sys.tas.foobar.com": {
@@ -397,10 +394,12 @@ backend backend_1025
 						},
 						"rmq2.sys.tas.foobar.com": {
 							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.38", Port: 8890, TLSPort: 0, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true},
 						},
 					},
 				}
-				actual := marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, config.FrontendTLSConfig{Enabled: true, CertificatePath: "/fake/path/to/certs/"})
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
 				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
@@ -417,27 +416,26 @@ backend backend_1025_rmq1.sys.tas.foobar.com
 backend backend_1025_rmq2.sys.tas.foobar.com
   mode tcp
   server server_88.0.0.37_8889 88.0.0.37:8889
+  server server_88.0.0.38_8890 88.0.0.38:8890
 `))
-
 			})
 
-			It("for a route with TLS terminating at the router and starting another TLS session with backend", func() {
-				//[]apimodels.TcpRouteMapping{
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8888, HostIP: "88.0.0.36", InstanceId: "host-88-instance-id", ExternalPort: 1025, HostTLSPort: 8888, SniHostname: Ptr("rmq1.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
-				//	{TcpMappingEntity: apimodels.TcpMappingEntity{RouterGroupGuid: "foobar", HostPort: 8889, HostIP: "88.0.0.37", InstanceId: "host-89-instance-id", ExternalPort: 1025, HostTLSPort: 8889, SniHostname: Ptr("rmq2.sys.tas.foobar.com"), TerminateFrontendTLS: true}},
-				//})
+			It("and backend_tls is enabled", func() {
+				backendTlsCfg.Enabled = true
 
 				haproxyConf = models.HAProxyConfig{
 					1025: {
 						"rmq1.sys.tas.foobar.com": {
-							{Address: "88.0.0.36", Port: 8888, TLSPort: 8888, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.36", TLSPort: 8888, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
 						},
 						"rmq2.sys.tas.foobar.com": {
-							{Address: "88.0.0.37", Port: 8889, TLSPort: 8889, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.37", TLSPort: 8889, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.38", TLSPort: 8890, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true},
 						},
 					},
 				}
-				actual := marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: true, CACertificatePath: "/fake/path/to/ca.pem"}, config.FrontendTLSConfig{Enabled: true, CertificatePath: "/fake/path/to/certs/"})
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
 				Expect(actual).To(Equal(`
 frontend frontend_1025
   mode tcp
@@ -454,6 +452,7 @@ backend backend_1025_rmq1.sys.tas.foobar.com
 backend backend_1025_rmq2.sys.tas.foobar.com
   mode tcp
   server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
+  server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required verifyhost host-90-instance-id ca-file /fake/path/to/ca.pem
 `))
 			})
 		})
