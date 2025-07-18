@@ -356,7 +356,7 @@ backend backend_80
 		})
 
 		Context("when frontend_tls is disabled", func() {
-			It("for a simple route", func() {
+			It("and backend_tls is disabled", func() {
 				haproxyConf = models.HAProxyConfig{
 					1025: {
 						"": {
@@ -453,6 +453,40 @@ backend backend_1025_rmq2.sys.tas.foobar.com
   mode tcp
   server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
   server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required verifyhost host-90-instance-id ca-file /fake/path/to/ca.pem
+`))
+			})
+
+			It("and backend_tls is disabled and ALPNs are defined", func() {
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn3"},
+							{Address: "88.0.0.38", Port: 8890, TLSPort: 0, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn4,alpn1"},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/ alpn alpn1,alpn2,alpn3,alpn4
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889
+  server server_88.0.0.38_8890 88.0.0.38:8890
 `))
 			})
 		})

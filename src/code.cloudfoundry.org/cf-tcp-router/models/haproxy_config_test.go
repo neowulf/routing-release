@@ -285,9 +285,9 @@ var _ = Describe("HAProxyConfig", func() {
 			It("when there is a single SniHostname", func() {
 				frontends := HAProxyFrontend{
 					"foobar.com": {
-						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{ALPNs: "alpn2"},
 						HAProxyServer{},
-						HAProxyServer{ALPN: "alpn1"},
+						HAProxyServer{ALPNs: "alpn1"},
 					},
 				}
 
@@ -298,15 +298,15 @@ var _ = Describe("HAProxyConfig", func() {
 			It("when there are multiple SniHostnames", func() {
 				frontends := HAProxyFrontend{
 					"host.com": {
-						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{ALPNs: "alpn2"},
 						HAProxyServer{},
-						HAProxyServer{ALPN: "alpn1"},
+						HAProxyServer{ALPNs: "alpn1"},
 					},
 					"foobar.com": {
-						HAProxyServer{ALPN: "alpn2"},
+						HAProxyServer{ALPNs: "alpn2"},
 						HAProxyServer{},
-						HAProxyServer{ALPN: "alpn1"},
-						HAProxyServer{ALPN: "alpn3"},
+						HAProxyServer{ALPNs: "alpn1"},
+						HAProxyServer{ALPNs: "alpn3"},
 					},
 				}
 

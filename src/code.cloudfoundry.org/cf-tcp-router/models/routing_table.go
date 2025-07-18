@@ -24,7 +24,7 @@ type BackendServerInfo struct {
 	ModificationTag      routing_api_models.ModificationTag
 	TTL                  int
 	TerminateFrontendTLS bool
-	ALPN                 string
+	ALPNs                string
 }
 
 type BackendServerKey struct {
@@ -33,7 +33,7 @@ type BackendServerKey struct {
 	TLSPort              int
 	InstanceID           string
 	TerminateFrontendTLS bool
-	ALPN                 string
+	ALPNs                string
 }
 
 type BackendServerDetails struct {
@@ -56,7 +56,7 @@ func NewRoutingTableEntry(backends []BackendServerInfo) RoutingTableEntry {
 		Backends: make(map[BackendServerKey]BackendServerDetails),
 	}
 	for _, backend := range backends {
-		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID, TerminateFrontendTLS: backend.TerminateFrontendTLS, ALPN: backend.ALPN}
+		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID, TerminateFrontendTLS: backend.TerminateFrontendTLS, ALPNs: backend.ALPNs}
 		backendServerDetails := BackendServerDetails{ModificationTag: backend.ModificationTag, TTL: backend.TTL, UpdatedTime: time.Now()}
 
 		routingTableEntry.Backends[backendServerKey] = backendServerDetails
@@ -122,7 +122,7 @@ func (table RoutingTable) PruneEntries(defaultTTL int) {
 }
 
 func (table RoutingTable) serverKeyDetailsFromInfo(info BackendServerInfo) (BackendServerKey, BackendServerDetails) {
-	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID, TerminateFrontendTLS: info.TerminateFrontendTLS, ALPN: info.ALPN}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
+	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID, TerminateFrontendTLS: info.TerminateFrontendTLS, ALPNs: info.ALPNs}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
 }
 
 // Set returns true if routing configuration should be modified, false if it should not.

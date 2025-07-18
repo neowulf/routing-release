@@ -101,8 +101,11 @@ func (hf HAProxyFrontend) CollectALPNs() []string {
 	set := make(map[string]struct{})
 	for _, backends := range hf {
 		for _, backend := range backends {
-			if backend.ALPN != "" {
-				set[backend.ALPN] = struct{}{}
+			if backend.ALPNs != "" {
+				alpns := strings.Split(backend.ALPNs, ",")
+				for _, alpn := range alpns {
+					set[alpn] = struct{}{}
+				}
 			}
 		}
 	}
