@@ -208,7 +208,7 @@ var _ = Describe("RoutingTable", func() {
 		Context("when the routing key does not exist in the table", func() {
 			Context("when the table has no existing entries", func() {
 				It("adds the new entry and indicates the config needs to be reloaded", func() {
-					reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, existingBackendServerInfo)
+					reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, existingBackendServerInfo)
 
 					Expect(reloadConfig).To(BeTrue())
 					Expect(logger).To(gbytes.Say("routing-key-not-found"))
@@ -228,7 +228,7 @@ var _ = Describe("RoutingTable", func() {
 				Context("and the new routing key port does not exist", func() {
 					It("adds the new entry and indicates the config needs to be reloaded", func() {
 						newRoutingKey := models.RoutingKey{Port: 90}
-						reloadConfig := routingTable.upsertBackendServerKey(newRoutingKey, existingBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(newRoutingKey, existingBackendServerInfo)
 
 						Expect(reloadConfig).To(BeTrue())
 						Expect(logger).To(gbytes.Say("routing-key-not-found"))
@@ -242,7 +242,7 @@ var _ = Describe("RoutingTable", func() {
 				Context("and the new routing key SNI hostname does not exist", func() {
 					It("adds the new entry and indicates the config needs to be reloaded", func() {
 						newRoutingKey := models.RoutingKey{Port: 80, SniHostname: "host-2.example.com"}
-						reloadConfig := routingTable.upsertBackendServerKey(newRoutingKey, existingBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(newRoutingKey, existingBackendServerInfo)
 
 						Expect(reloadConfig).To(BeTrue())
 						Expect(logger).To(gbytes.Say("routing-key-not-found"))
@@ -315,7 +315,7 @@ var _ = Describe("RoutingTable", func() {
 							ModificationTag: routing_api_models.ModificationTag{Guid: "22222222-2222-2222-2222-222222222222", Index: 1},
 						}
 
-						reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
 
 						Expect(reloadConfig).To(BeTrue())
 						Expect(logger).To(gbytes.Say("applying-change-to-table"))
@@ -352,7 +352,7 @@ var _ = Describe("RoutingTable", func() {
 							Port:    9090,
 						}
 
-						reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
 
 						Expect(reloadConfig).To(BeTrue())
 						Expect(logger).To(gbytes.Say("applying-change-to-table"))
@@ -395,7 +395,7 @@ var _ = Describe("RoutingTable", func() {
 								Index: existingBackendServerInfo.ModificationTag.Index - 1, // Earlier than existing backend server
 							},
 						}
-						reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
 
 						Expect(reloadConfig).To(BeFalse())
 						Expect(logger).To(gbytes.Say("skipping-stale-event"))
@@ -430,7 +430,7 @@ var _ = Describe("RoutingTable", func() {
 								Index: existingBackendServerInfo.ModificationTag.Index, // Identical to existing backend
 							},
 						}
-						reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
 
 						Expect(reloadConfig).To(BeFalse())
 						Expect(logger).To(gbytes.Say("skipping-stale-event"))
@@ -465,7 +465,7 @@ var _ = Describe("RoutingTable", func() {
 								Index: existingBackendServerInfo.ModificationTag.Index + 1, // Newer than existing backend
 							},
 						}
-						reloadConfig := routingTable.upsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
+						reloadConfig := routingTable.UpsertBackendServerKey(existingRoutingKey, newBackendServerInfo)
 
 						Expect(reloadConfig).To(BeFalse())
 						Expect(logger).To(gbytes.Say("applying-change-to-table"))
