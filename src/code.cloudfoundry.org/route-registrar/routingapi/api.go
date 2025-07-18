@@ -8,10 +8,10 @@ import (
 	"code.cloudfoundry.org/route-registrar/config"
 	"golang.org/x/oauth2"
 
-	routing_api "code.cloudfoundry.org/routing-api"
 	"code.cloudfoundry.org/routing-api/models"
 
 	"code.cloudfoundry.org/lager/v3"
+	routing_api "code.cloudfoundry.org/routing-api"
 )
 
 type RoutingAPI struct {
