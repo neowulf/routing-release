@@ -7,15 +7,15 @@ toolchain go1.24.2
 replace github.com/cactus/go-statsd-client => github.com/cactus/go-statsd-client v2.0.2-0.20150911070441-6fa055a7b594+incompatible
 
 require (
-	code.cloudfoundry.org/cfhttp/v2 v2.48.0
-	code.cloudfoundry.org/clock v1.41.0
-	code.cloudfoundry.org/debugserver v0.57.0
-	code.cloudfoundry.org/eventhub v0.43.0
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20250616201327-f53d89d4167e
-	code.cloudfoundry.org/lager/v3 v3.40.0
-	code.cloudfoundry.org/localip v0.43.0
+	code.cloudfoundry.org/cfhttp/v2 v2.49.0
+	code.cloudfoundry.org/clock v1.42.0
+	code.cloudfoundry.org/debugserver v0.58.0
+	code.cloudfoundry.org/eventhub v0.44.0
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20250714130553-c98a6df26a10
+	code.cloudfoundry.org/lager/v3 v3.41.0
+	code.cloudfoundry.org/localip v0.44.0
 	code.cloudfoundry.org/locket v0.0.0-20250423181647-b2b48694f201
-	code.cloudfoundry.org/tlsconfig v0.30.0
+	code.cloudfoundry.org/tlsconfig v0.31.0
 	github.com/armon/go-proxyproto v0.1.0
 	github.com/cactus/go-statsd-client v3.2.1+incompatible
 	github.com/cloudfoundry-community/go-uaa v0.3.5
@@ -54,8 +54,8 @@ require (
 
 require (
 	code.cloudfoundry.org/bbs v0.0.0-20250707190811-521c7abd1edf // indirect
-	code.cloudfoundry.org/diego-logging-client v0.60.0 // indirect
-	code.cloudfoundry.org/durationjson v0.44.0 // indirect
+	code.cloudfoundry.org/diego-logging-client v0.61.0 // indirect
+	code.cloudfoundry.org/durationjson v0.45.0 // indirect
 	code.cloudfoundry.org/go-diodes v0.0.0-20250505082646-e4c2d772c2ec // indirect
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1 // indirect
 	code.cloudfoundry.org/inigo v0.0.0-20210615140442-4bdc4f6e44d5 // indirect
@@ -102,6 +102,6 @@ require (
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
