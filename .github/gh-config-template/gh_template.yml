@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-build
+      image: us-central1-docker.pkg.dev/app-runtime-platform-wg/dockerhub-mirror/cloudfoundry/tas-runtime-build
       credentials:
         username: _json_key
         password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-mysql-5.7
+      image: us-central1-docker.pkg.dev/app-runtime-platform-wg/dockerhub-mirror/cloudfoundry/tas-runtime-mysql-5.7
       credentials:
         username: _json_key
         password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-build
+      image: us-central1-docker.pkg.dev/app-runtime-platform-wg/dockerhub-mirror/cloudfoundry/tas-runtime-build
       credentials:
         username: _json_key
         password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-postgres
+      image: us-central1-docker.pkg.dev/app-runtime-platform-wg/dockerhub-mirror/cloudfoundry/tas-runtime-postgres
       credentials:
         username: _json_key
         password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: repo-clone
     container:
-      image: us-central1-docker.pkg.dev/cf-diego-pivotal/tas-runtime-dockerhub-mirror/cloudfoundry/tas-runtime-mysql-8.0
+      image: us-central1-docker.pkg.dev/app-runtime-platform-wg/dockerhub-mirror/cloudfoundry/tas-runtime-mysql-8.0
       credentials:
         username: _json_key
         password: ${{ secrets.GCP_SERVICE_ACCOUNT_TAS_RUNTIME_BUILD_IMAGE_READER }}

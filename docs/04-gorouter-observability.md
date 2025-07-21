@@ -532,6 +532,6 @@ backend_time:<Backend Time> x_cf_routererror:<X-Cf-RouterError>
 * `X-CF-RouterError` is populated if the Gorouter encounters an error. This can
   help distinguish if a non-2xx response code is due to an error in the Gorouter
   or the backend. For more information on the possible Router Error causes go to
-  the [#router-errors](03-features.md#router-errors) section.
+  the [#router-errors](03-gorouter-features.md#router-errors) section.
 
 Access logs are also redirected to syslog.

@@ -2,7 +2,6 @@ package integration
 
 import (
 	"crypto/tls"
-	"io"
 	"os"
 	"os/exec"
 	"syscall"
@@ -64,17 +63,9 @@ func startGorouterSession(cfgFile string) *Session {
 	gorouterCmd := exec.Command(gorouterPath, "-c", cfgFile)
 	session, err := Start(gorouterCmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
-	var eventsSessionLogs []byte
+
 	Eventually(func() string {
-		logAdd, err := io.ReadAll(session.Out)
-		if err != nil {
-			if session.ExitCode() >= 0 {
-				Fail("gorouter quit early!")
-			}
-			return ""
-		}
-		eventsSessionLogs = append(eventsSessionLogs, logAdd...)
-		return string(eventsSessionLogs)
+		return string(session.Out.Contents())
 	}, 70*time.Second).Should(SatisfyAll(
 		ContainSubstring(`starting`),
 		MatchRegexp(`Successfully-connected-to-nats.*localhost:\d+`),

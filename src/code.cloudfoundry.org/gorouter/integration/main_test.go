@@ -2,7 +2,9 @@ package integration
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,6 +43,10 @@ import (
 
 var _ = Describe("Router Integration", func() {
 
+	const (
+		appHostname = "myapp-with-route-service.some.domain"
+	)
+
 	var (
 		cfg                                                                                               *config.Config
 		cfgFile                                                                                           string
@@ -49,6 +55,8 @@ var _ = Describe("Router Integration", func() {
 		natsRunner                                                                                        *test_util.NATSRunner
 		gorouterSession                                                                                   *Session
 		oauthServerURL                                                                                    string
+		testState                                                                                         *testState
+		testApp, routeService                                                                             *httptest.Server
 	)
 
 	BeforeEach(func() {
@@ -616,6 +624,345 @@ var _ = Describe("Router Integration", func() {
 			return string(gorouterSession.Out.Contents())
 		}
 		Consistently(contentsFunc).ShouldNot(ContainSubstring("Component Router registered successfully"))
+	})
+
+	Context("It starts up a debugserver", func() {
+		var (
+			contentsFunc func() string = func() string {
+				return string(gorouterSession.Out.Contents())
+			}
+		)
+
+		BeforeEach(func() {
+			testState = NewTestState()
+			testState.cfg.DebugAddr = "127.0.0.1:17017"
+			testState.StartGorouterOrFail()
+			gorouterSession = testState.gorouterSession
+
+			// A test app is started that the gorouter can route to.
+			testApp = httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Add("X-App-Instance", "app1")
+					w.WriteHeader(200)
+					_, err := w.Write([]byte("I'm the app"))
+					Expect(err).ToNot(HaveOccurred())
+				}))
+
+			// A test route service that the gorouter can route to.
+			// It will forward the request to the test app and return the response.
+			routeService = httptest.NewUnstartedServer(
+				http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						defer GinkgoRecover()
+
+						forwardedURL := r.Header.Get("X-CF-Forwarded-Url")
+						sigHeader := r.Header.Get("X-Cf-Proxy-Signature")
+						metadata := r.Header.Get("X-Cf-Proxy-Metadata")
+
+						req := testState.newGetRequest(forwardedURL)
+
+						req.Header.Add("X-CF-Forwarded-Url", forwardedURL)
+						req.Header.Add("X-Cf-Proxy-Metadata", metadata)
+						req.Header.Add("X-Cf-Proxy-Signature", sigHeader)
+
+						res, err := testState.routeServiceClient.Do(req)
+						Expect(err).ToNot(HaveOccurred())
+						defer res.Body.Close()
+					}))
+
+			// Start the route service. The routes check at the endpoint
+			// http://<username>:<password>@127.0.0.1:<>/routes would show something like below.
+			// {"internal-route-service-43749.localhost.routing.cf-app.com":[{	"address":"127.0.0.1:43749","availability_zone":"","protocol":"http1","tls":false,"ttl":10,"tags":null,"private_instance_id":"4b63c7ba"}]}
+			routeService.Start()
+
+			testState.registerWithInternalRouteService(
+				testApp,
+				routeService,
+				appHostname,
+				testState.cfg.SSLPort,
+			)
+		})
+
+		AfterEach(func() {
+			if routeService != nil {
+				routeService.Close()
+			}
+			if testApp != nil {
+				testApp.Close()
+			}
+		})
+
+		It("can change the debugserver's logging level", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("debug"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			Consistently(contentsFunc).Should(ContainSubstring(`{"log_level":0,"timestamp"`))
+
+			// And back to info level
+			gorouterSession.Out.Clear()
+			request, err = http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("info"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err = http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			//Terminate everything just to generate some info logs
+			testState.StopAndCleanup()
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":0,"timestamp"`))
+			Eventually(contentsFunc).Should(ContainSubstring(`{"log_level":1,"timestamp"`))
+
+		})
+
+		It("Does not accept invalid debug levels", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("meow"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).ToNot(Equal(http.StatusOK))
+			response.Body.Close()
+
+			gorouterSession.Out.Clear()
+
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+
+			// Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":0,"timestamp"`))
+			// Eventually(contentsFunc).Should(ContainSubstring(`{"log_level":1,"timestamp"`))
+		})
+
+		It("Accepts info as a valid log level", func() {
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("info"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// clear the gorouter session output to avoid confusion with previous logs
+			gorouterSession.Out.Clear()
+
+			// Stop the gorouter and it will generate some logs like below.
+			// {"log_level":1,"timestamp":1751405405.2474551,"message":"nats-connection-disconnected","source":"gorouter.stdout.nats","data":{"host":"localhost:25043","addr":"[::1]:25043"}}
+			// {"log_level":1,"timestamp":1751405405.346799,"message":"gorouter.stopping","source":"gorouter.stdout.router"}
+			testState.StopAndCleanup()
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(0))
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":0,"timestamp"`))
+			Eventually(contentsFunc).Should(ContainSubstring(`{"log_level":1,"timestamp"`))
+		})
+
+		It("Accepts warn as a valid log level", func() {
+
+			// Clear the gorouter session output to avoid confusion with previous logs
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("warn"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// Get an invalid certificate chain and rule to trigger a warning log
+			chain, rule, err := test_util.CreateInvalidCertAndRule("potato.com", []string{"spinach.com"})
+			Expect(err).ToNot(HaveOccurred())
+
+			// Override the CA Subject to match the chain's issuer
+			// rule.CASubject = config.NewCertSubjectFromName(chain[0].Issuer)
+			rule.CASubject = config.CertSubject{
+				CommonName:   chain[0].Issuer.CommonName,
+				Organization: chain[0].Issuer.Organization,
+			}
+
+			// Calling VerifyClientCertMetadata with the client certificate metadata rule should result in
+			// a warning log since the chain does not match the rule. The rule is set to require a common
+			// name of "spinach.com" but the chain's issuer common name is "potato.com".
+			testLogger := test_util.NewTestLogger("test")
+			err = config.VerifyClientCertMetadata([]config.VerifyClientCertificateMetadataRule{rule}, [][]*x509.Certificate{chain}, testLogger.Logger)
+
+			// err = config.CheckClientCertificateMetadataRule(chain, logger, rule)
+			Expect(err).To(HaveOccurred())
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+
+			// A warning log should be generated like below.
+			// {"log_level":2,"timestamp":1751436459.3247795,"message":"invalid-subject","source":"test","data":{"issuer":"CN=theCA,O=xyz\\, Inc.","subject":"O=xyz\\, Inc.","allowed":{}}}
+			testLogs := string(testLogger.TestSink.Buffer.Contents())
+			Expect(testLogs).Should(ContainSubstring(`"log_level":2,"timestamp"`))
+		})
+
+		It("Accepts error as a valid log level", func() {
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("error"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// Stop the app and leave the route in place. This will generate
+			// some logs at error level since the app is no longer running.
+			// {"log_level":3,"timestamp":1751405779.235571,"message":"backend-endpoint-failed","source":"gorouter.stdout","data":{"route-endpoint":{"ApplicationId":"","Addr":"127.0.0.1:35913","Tags":null,"RouteServiceUrl":"https://internal-route-service-38401.localhost.routing.cf-app.com:25041","AZ":""},"attempt":1,"vcap_request_id":"a02f408e-ba00-44ea-71dd-a2ee6fd0fb07","num-endpoints":1,"got-connection":false,"wrote-headers":false,"conn-reused":false,"dns-lookup-time":0,"dial-time":0.000156212,"tls-handshake-time":0,"local-address":"","error":"incomplete request (dial tcp 127.0.0.1:35913: connect: connection refused)","retriable":true}}
+			// {"log_level":3,"timestamp":1751405779.235689,"message":"endpoint-marked-as-ineligible","source":"gorouter.stdout.registry","data":{"route-endpoint":{"ApplicationId":"","Addr":"127.0.0.1:35913","Tags":null,"RouteServiceUrl":"https://internal-route-service-38401.localhost.routing.cf-app.com:25041","AZ":""}}}
+			gorouterSession.Out.Clear()
+			testApp.Close()
+
+			// Sending a request to the app hostname will generate logs
+			// at error level since the app is no longer running.
+			req := testState.newGetRequest(fmt.Sprintf("https://%s", appHostname))
+			_, err = testState.client.Do(req)
+			Expect(err).To(BeNil())
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":0,"timestamp"`))
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":1,"timestamp"`))
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":2,"timestamp"`))
+			Eventually(contentsFunc).Should(ContainSubstring(`{"log_level":3,"timestamp"`))
+		})
+
+		It("Accepts fatal as a valid log level", func() {
+
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("fatal"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// Stop the gorouter session and restart it with an invalid config to generate fatal log
+			testState.StopAndCleanup()
+
+			// Note that Gorouter logger.Fatal() generates a log at Error level (3) like below.
+			// {"log_level":3,"timestamp":1751476408.1017516,"message":"Error loading config:","data":{"error":"router.client_cert_validation must be one of 'none', 'request' or 'require'."}}
+			writeConfig(&config.Config{EnableSSL: true}, cfgFile)
+			gorouterCmd := exec.Command(gorouterPath, "-c", cfgFile)
+			gorouterSession, _ = Start(gorouterCmd, GinkgoWriter, GinkgoWriter)
+			Eventually(gorouterSession, 5*time.Second).Should(Exit(1))
+
+			// Fatal logs are generated at Error level, so we check for log_level 3
+			// and the message "Error loading config" in the gorouter session output.
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":1,"timestamp"`))
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{"log_level":2,"timestamp"`))
+			Eventually(contentsFunc).Should(ContainSubstring(`Error loading config`))
+			Eventually(contentsFunc).Should(ContainSubstring(`{"log_level":3,"timestamp"`))
+
+		})
+
+		It("Does not accept empty log level", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("POST", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("{}"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).ToNot(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+		})
+
+		It("Does not accept GET on the log level", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("GET", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("fatal"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).ToNot(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+		})
+
+		It("Does not accept PUT on the log level", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("PUT", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("info"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).ToNot(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+		})
+
+		It("Does not accept DELETE on the log level", func() {
+
+			Consistently(contentsFunc).ShouldNot(ContainSubstring(`{log_level":0,"timestamp"`))
+
+			gorouterSession.Out.Clear()
+
+			request, err := http.NewRequest("DELETE", fmt.Sprintf("http://%s/log-level", testState.cfg.DebugAddr), bytes.NewBufferString("info"))
+			Expect(err).NotTo(HaveOccurred())
+
+			response, err := http.DefaultClient.Do(request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.StatusCode).ToNot(Equal(http.StatusOK))
+			response.Body.Close()
+
+			// We don't expect the gorouter to exit, so we check the exit code
+			// is still -1 (indicating it is still running)
+			Expect(gorouterSession.ExitCode()).To(Equal(-1))
+		})
 	})
 
 	Describe("loggregator metrics emitted", func() {
@@ -1495,9 +1842,9 @@ func appRegistered(routesUri string, app registeredApp) bool {
 func routeExists(routesEndpoint, routeName string) (bool, error) {
 	resp, err := http.Get(routesEndpoint)
 	if err != nil {
-		fmt.Println("Failed to get from routes endpoint")
 		return false, err
 	}
+
 	switch resp.StatusCode {
 	case http.StatusOK:
 		bytes, err := io.ReadAll(resp.Body)
@@ -1506,10 +1853,8 @@ func routeExists(routesEndpoint, routeName string) (bool, error) {
 		routes := make(map[string]interface{})
 		err = json.Unmarshal(bytes, &routes)
 		Expect(err).ToNot(HaveOccurred())
-
 		_, found := routes[routeName]
 		return found, nil
-
 	default:
 		return false, errors.New("Didn't get an OK response")
 	}

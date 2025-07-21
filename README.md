@@ -9,8 +9,12 @@ for [CF Deployment](https://github.com/cloudfoundry/cf-deployment).
 
 # Docs
 
+-   [Development Guide](./docs/01-gorouter-development-guide.md)
+-   [Usage](./docs/01-route-registrar-usage.md)
 -   [Usage](./docs/01-routing-acceptance-tests-usage.md)
 -   [Usage](./docs/01-routing-api-cli-usage.md)
+-   [NATS Configuration](./docs/02-gorouter-nats-configuration.md)
+-   [Features](./docs/03-gorouter-features.md)
 -   [How To Add a New Route
     Option](./docs/03-how-to-add-new-route-option.md)
 -   [How To enable Quotas for TCP
@@ -27,6 +31,7 @@ for [CF Deployment](https://github.com/cloudfoundry/cf-deployment).
     deprecation](./docs/04-go1.15-x509-commonname-deprecation.md)
 -   [(go1.20) Multiple Expect 100-continue
     responses](./docs/04-go1.20-multiple-expect-100-continue.md)
+-   [Observability](./docs/04-gorouter-observability.md)
 -   [(routing-release-0.262.0) Healthy App Route
     Pruning](./docs/04-routing-0.262.0-healthy-app-route-pruning.md)
 -   [(routing-release-0.277.0) TCP Router Port
