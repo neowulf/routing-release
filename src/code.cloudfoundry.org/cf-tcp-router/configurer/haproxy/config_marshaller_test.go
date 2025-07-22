@@ -30,8 +30,8 @@ var _ = Describe("ConfigMarshaller", func() {
 				CACertificatePath: "/fake/path/to/ca.pem",
 			}
 			frontendTlsCfg = config.FrontendTLSConfig{
-				Enabled:         false,
-				CertificatePath: "/fake/path/to/certs/",
+				Enabled:        false,
+				CertificateDir: "/fake/path/to/certs/",
 			}
 		})
 

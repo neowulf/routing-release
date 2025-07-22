@@ -37,8 +37,7 @@ type FrontendTLSConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5.1-crt
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#3.12-load
-	// TODO does this string need to end with a forward slash?
-	CertificatePath string `yaml:"cert_path"`
+	CertificateDir string `yaml:"cert_dir"`
 }
 
 type BackendTLSConfig struct {
@@ -161,6 +160,22 @@ func (c *Config) initConfigFromFile(path string) error {
 	} else {
 		c.BackendTLS.CACertificatePath = ""
 		c.BackendTLS.ClientCertAndKeyPath = ""
+	}
+
+	if c.FrontendTLS.Enabled {
+		certPath := c.FrontendTLS.CertificateDir
+		if certPath == "" {
+			return errors.New("frontend_tls.cert_path is required")
+		}
+
+		info, err := os.Stat(certPath)
+		if err != nil {
+			return fmt.Errorf("Error checking directory %q: %s", certPath, err)
+		} else if !info.IsDir() {
+			return fmt.Errorf("Path %q exists but is not a directory", certPath)
+		}
+	} else {
+		c.FrontendTLS.CertificateDir = ""
 	}
 
 	return nil

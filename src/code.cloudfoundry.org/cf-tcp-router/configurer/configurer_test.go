@@ -67,6 +67,27 @@ var _ = Describe("Configurer", func() {
 					}).Should(Panic())
 				})
 			})
+			Context("when FrontendTLS is enabled and empty CertDir are passed", func() {
+				It("should panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true})
+					}).ShouldNot(Panic())
+				})
+			})
+			Context("when FrontendTLS is enabled and invalid CertDir is passed", func() {
+				It("should panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "foobar"})
+					}).Should(Panic())
+				})
+			})
+			Context("when FrontendTLS is enabled and valid CertDir is passed", func() {
+				It("should not panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "fixtures"})
+					}).Should(Panic())
+				})
+			})
 			Context("when empty CA + ClientCertAndKey paths are passed", func() {
 				It("should not panic", func() {
 					Expect(func() {

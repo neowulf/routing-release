@@ -16,6 +16,7 @@ import (
 const (
 	ErrRouterConfigFileNotFound = "Configuration file not found"
 	ErrRouterCAFileNotFound     = "CA file not found"
+	ErrRouterCertDirNotFound    = "Certificate directory not found"
 )
 
 type Configurer struct {
@@ -34,9 +35,11 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 	if !utils.FileExists(baseConfigFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, baseConfigFilePath)
 	}
+
 	if !utils.FileExists(configFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, configFilePath)
 	}
+
 	if backendTlsCfg.CACertificatePath != "" && !utils.FileExists(backendTlsCfg.CACertificatePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.CACertificatePath)
 	}
@@ -45,7 +48,9 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.ClientCertAndKeyPath)
 	}
 
-	// TODO: add validation for frontend tls config
+	if frontendTlsCfg.CertificateDir != "" && !utils.DirExists(frontendTlsCfg.CertificateDir) {
+		return nil, fmt.Errorf("%s: [%s]", ErrRouterCertDirNotFound, frontendTlsCfg.CertificateDir)
+	}
 
 	return &Configurer{
 		logger:             logger,

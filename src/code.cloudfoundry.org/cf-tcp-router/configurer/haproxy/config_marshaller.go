@@ -45,7 +45,7 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 	frontendStanza.WriteString(fmt.Sprintf("\n  bind :%d", port))
 
 	if frontend.TerminateFrontendTLS() {
-		frontendStanza.WriteString(fmt.Sprintf(" ssl crt %s", frontendTlsCfg.CertificatePath))
+		frontendStanza.WriteString(fmt.Sprintf(" ssl crt %s", frontendTlsCfg.CertificateDir))
 
 		alpns := frontend.CollectALPNs()
 		if len(alpns) > 0 {

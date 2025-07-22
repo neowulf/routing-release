@@ -113,47 +113,88 @@ var _ = Describe("Config", Serial, func() {
 		})
 	})
 
-	Context("When backend_tls is enabled", func() {
-		Context("when the CA path is not a valid CA", func() {
-			It("returns an error", func() {
-				_, err := config.New("fixtures/bad_ca_config.yml")
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid PEM block found in file"))
+	Context("when backend_tls", func() {
+		Context("is enabled", func() {
+			Context("when the CA path is not a valid CA", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/bad_ca_config.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Invalid PEM block found in file"))
+				})
+			})
+
+			Context("when the Client Cert/key pair are not valid", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/bad_client_cert_config.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Invalid PEM CERTIFICATE found in file"))
+				})
+			})
+
+			Context("when the Client Cert/key pair are mismatched", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/mismatched_client_cert_config.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Unable to validate backend TLS client cert + key in file"))
+					Expect(err.Error()).To(ContainSubstring("tls: private key does not match public key"))
+				})
+			})
+
+			Context("when CA path is not specified", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/no_ca.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Backend TLS was enabled but no CA certificates were specified"))
+				})
 			})
 		})
 
-		Context("when the Client Cert/key pair are not valid", func() {
-			It("returns an error", func() {
-				_, err := config.New("fixtures/bad_client_cert_config.yml")
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid PEM CERTIFICATE found in file"))
-			})
-		})
-
-		Context("when the Client Cert/key pair are mismatched", func() {
-			It("returns an error", func() {
-				_, err := config.New("fixtures/mismatched_client_cert_config.yml")
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Unable to validate backend TLS client cert + key in file"))
-				Expect(err.Error()).To(ContainSubstring("tls: private key does not match public key"))
-			})
-		})
-		Context("when CA path is not specified", func() {
-			It("returns an error", func() {
-				_, err := config.New("fixtures/no_ca.yml")
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Backend TLS was enabled but no CA certificates were specified"))
+		Context("is disabled", func() {
+			It("does not set any of the backend_tls cert/ca values", func() {
+				cfg, err := config.New("fixtures/disabled_tls.yml")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.BackendTLS).To(Equal(config.BackendTLSConfig{
+					Enabled: false,
+				}))
 			})
 		})
 	})
 
-	Context("when backend_tls is disabled", func() {
-		It("does not set any of the backend_tls cert/ca values", func() {
-			cfg, err := config.New("fixtures/disabled_tls.yml")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.BackendTLS).To(Equal(config.BackendTLSConfig{
-				Enabled: false,
-			}))
+	Context("when frontend_tls", func() {
+		Context("is enabled", func() {
+			Context("when cert_dir is not specified", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/invalid_frontend_tls.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("frontend_tls.cert_path is required"))
+				})
+			})
+			Context("when cert_dir is pointing to a file", func() {
+				It("all of the frontend_tls values are set", func() {
+					_, err := config.New("fixtures/invalid_frontend_tls_1.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(`Path "fixtures/ca.pem" exists but is not a directory`))
+				})
+			})
+			Context("when cert_dir is pointing to a non existing directory", func() {
+				It("returns an error", func() {
+					_, err := config.New("fixtures/invalid_frontend_tls_2.yml")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(`Error checking directory "invalid_dir": stat invalid_dir: no such file or directory`))
+				})
+			})
+		})
+
+		Context("is disabled", func() {
+			Context("when cert_dir is specified", func() {
+				It("does not set any of the frontend_tls values", func() {
+					cfg, err := config.New("fixtures/disabled_frontend_tls.yml")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(cfg.FrontendTLS).To(Equal(config.FrontendTLSConfig{
+						Enabled: false,
+					}))
+				})
+			})
 		})
 	})
 
