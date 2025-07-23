@@ -94,7 +94,7 @@ var _ = Describe("Config", func() {
 					RegistrationInterval: registrationInterval1String,
 					URIs:                 []string{"my-other-app.my-domain.com"},
 					ServerCertDomainSAN:  "my.internal.cert",
-					TerminateFrontendTLS: false,
+					TerminateFrontendTLS: true,
 					ALPNs:                []string{"h2", "http/1.1"},
 					Options: &config.Options{
 						LoadBalancingAlgorithm: config.LeastConns,
@@ -1356,7 +1356,7 @@ var _ = Describe("Config", func() {
 					Timeout:    5 * time.Second,
 				},
 				ServerCertDomainSAN:  "some.service.internal",
-				TerminateFrontendTLS: false,
+				TerminateFrontendTLS: true,
 				ALPNs:                []string{"alpn1", "alpn2"},
 				Options: &config.Options{
 					LoadBalancingAlgorithm: config.LeastConns,

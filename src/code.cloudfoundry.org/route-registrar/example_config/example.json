@@ -17,12 +17,12 @@
         "my-other-app.my-domain.com"
       ],
       "options": {
-        "loadbalancing": "least-connection",
-        "terminate_frontend_tls": false,
-        "alpns": ["h2", "http/1.1"]
+        "loadbalancing": "least-connection"
       },
       "registration_interval": "10s",
-      "server_cert_domain_san": "my.internal.cert"
+      "server_cert_domain_san": "my.internal.cert",
+      "terminate_frontend_tls": true,
+      "alpns": ["h2", "http/1.1"]
     },
     {
       "name": "route-2",
