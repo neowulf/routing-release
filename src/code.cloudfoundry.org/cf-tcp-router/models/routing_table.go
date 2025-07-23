@@ -89,7 +89,13 @@ func (e RoutingTableEntry) PruneBackends(defaultTTL int, logger lager.Logger) {
 // Used to determine whether the details have changed such that the routing configuration needs to be updated.
 // e.g max number of connection
 func (d BackendServerDetails) DifferentFrom(other BackendServerDetails) bool {
-	return d.UpdateSucceededBy(other) && false
+	// BackendServerDetails only contains TTL, ModificationTag, and UpdatedTime.
+	// Changes to these fields don't affect routing configuration.
+	// Routing configuration changes are detected by changes to BackendServerKey.
+	// TTL changes don't affect routing configuration, only expiration timing.
+	// ModificationTag changes don't affect routing configuration, only versioning.
+	// UpdatedTime changes don't affect routing configuration.
+	return false
 }
 
 func (d BackendServerDetails) UpdateSucceededBy(other BackendServerDetails) bool {

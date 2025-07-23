@@ -782,11 +782,11 @@ var _ = Describe("Updater", func() {
 						originalEntries = map[models.RoutingKey]models.RoutingTableEntry{
 							{Port: 2222, SniHostname: ""}: {
 								Backends: map[models.BackendServerKey]models.BackendServerDetails{
-									{Address: "some-ip-1", Port: 61000}: {
+									{Address: "some-ip-1", Port: 61000, TerminateFrontendTLS: false, ALPNs: ""}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
-									{Address: "some-ip-2", Port: 61001}: {
+									{Address: "some-ip-2", Port: 61001, TerminateFrontendTLS: false, ALPNs: ""}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
@@ -794,11 +794,11 @@ var _ = Describe("Updater", func() {
 							},
 							{Port: 2223, SniHostname: ""}: {
 								Backends: map[models.BackendServerKey]models.BackendServerDetails{
-									{Address: "some-ip-3", Port: 60000}: {
+									{Address: "some-ip-3", Port: 60000, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
-									{Address: "some-ip-4", Port: 60000}: {
+									{Address: "some-ip-4", Port: 60000, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
@@ -875,8 +875,8 @@ var _ = Describe("Updater", func() {
 									nil,
 									22,
 									newModificationTag,
-									true,
-									"h2,http/1.1",
+									false,
+									"",
 								),
 								Action: "Upsert",
 							}
