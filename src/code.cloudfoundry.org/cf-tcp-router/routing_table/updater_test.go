@@ -274,6 +274,74 @@ var _ = Describe("Updater", func() {
 					})
 				})
 			})
+
+			Context("when TerminateFrontendTLS is true and ALPNs are specified", func() {
+				BeforeEach(func() {
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-7",
+						8080,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						true,
+						"h2,http/1.1,alpn3",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Upsert",
+					}
+				})
+
+				It("creates routing table entry with TLS termination and ALPNs", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-7", Port: 8080, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1,alpn3"},
+						},
+					)
+					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("when TerminateFrontendTLS is false and ALPNs are empty", func() {
+				BeforeEach(func() {
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-8",
+						8081,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						false,
+						"",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Upsert",
+					}
+				})
+
+				It("creates routing table entry without TLS termination", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-8", Port: 8081, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
+				})
+			})
 		})
 
 		Context("when Delete event is received", func() {
@@ -463,6 +531,50 @@ var _ = Describe("Updater", func() {
 						verifyRoutingTableEntry(existingRoutingKey5, expectedRoutingTableEntry)
 						Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 					})
+				})
+			})
+
+			Context("when deleting backend with TLS settings", func() {
+				var existingRoutingKey8 models.RoutingKey
+				BeforeEach(func() {
+					existingRoutingKey8 = models.RoutingKey{Port: externalPort6}
+					existingRoutingTableEntry8 := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-10", Port: 8083, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+							models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					Expect(routingTable.Set(existingRoutingKey8, existingRoutingTableEntry8)).To(BeTrue())
+
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-10",
+						8083,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						true,
+						"h2,http/1.1",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Delete",
+					}
+				})
+
+				It("deletes the backend with matching TLS settings", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					verifyRoutingTableEntry(existingRoutingKey8, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 				})
 			})
 		})
@@ -1282,225 +1394,6 @@ var _ = Describe("Updater", func() {
 					_, drain = fakeConfigurer.ConfigureArgsForCall(1)
 					Expect(drain).To(BeTrue())
 				})
-			})
-		})
-	})
-
-	Context("when TerminateFrontendTLS and ALPNs properties are used", func() {
-		var (
-			syncTcpMappings []apimodels.TcpRouteMapping
-			syncDoneChannel chan struct{}
-		)
-
-		invokeSyncForTLS := func(doneChannel chan struct{}) {
-			defer GinkgoRecover()
-			updater.Sync()
-			close(doneChannel)
-		}
-
-		Context("when TerminateFrontendTLS is true and ALPNs are specified", func() {
-			BeforeEach(func() {
-				mapping := apimodels.NewTcpRouteMapping(
-					routerGroupGuid,
-					externalPort6,
-					"some-ip-7",
-					8080,
-					0,
-					"",
-					nil,
-					ttl,
-					modificationTag,
-					true,
-					"h2,http/1.1,alpn3",
-				)
-				tcpEvent = routing_api.TcpEvent{
-					TcpRouteMapping: mapping,
-					Action:          "Upsert",
-				}
-			})
-
-			It("creates routing table entry with TLS termination and ALPNs", func() {
-				err := updater.HandleEvent(tcpEvent)
-				Expect(err).NotTo(HaveOccurred())
-				expectedRoutingTableEntry := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-7", Port: 8080, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1,alpn3"},
-					},
-				)
-				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
-				Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when TerminateFrontendTLS is false and ALPNs are empty", func() {
-			BeforeEach(func() {
-				mapping := apimodels.NewTcpRouteMapping(
-					routerGroupGuid,
-					externalPort6,
-					"some-ip-8",
-					8081,
-					0,
-					"",
-					nil,
-					ttl,
-					modificationTag,
-					false,
-					"",
-				)
-				tcpEvent = routing_api.TcpEvent{
-					TcpRouteMapping: mapping,
-					Action:          "Upsert",
-				}
-			})
-
-			It("creates routing table entry without TLS termination", func() {
-				err := updater.HandleEvent(tcpEvent)
-				Expect(err).NotTo(HaveOccurred())
-				expectedRoutingTableEntry := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-8", Port: 8081, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: false, ALPNs: ""},
-					},
-				)
-				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
-				Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when updating existing backend with different TLS settings", func() {
-			var existingRoutingKey7 models.RoutingKey
-			BeforeEach(func() {
-				existingRoutingKey7 = models.RoutingKey{Port: externalPort6}
-				existingRoutingTableEntry7 := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-9", Port: 8082, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
-					},
-				)
-				Expect(routingTable.Set(existingRoutingKey7, existingRoutingTableEntry7)).To(BeTrue())
-
-				mapping := apimodels.NewTcpRouteMapping(
-					routerGroupGuid,
-					externalPort6,
-					"some-ip-9",
-					8082,
-					0,
-					"",
-					nil,
-					ttl,
-					modificationTag,
-					true,
-					"h2,http/1.1",
-				)
-				tcpEvent = routing_api.TcpEvent{
-					TcpRouteMapping: mapping,
-					Action:          "Upsert",
-				}
-			})
-
-			It("creates a new backend entry with different TLS settings and calls configurer", func() {
-				err := updater.HandleEvent(tcpEvent)
-				Expect(err).NotTo(HaveOccurred())
-				expectedRoutingTableEntry := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-9", Port: 8082, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
-						models.BackendServerInfo{Address: "some-ip-9", Port: 8082, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
-					},
-				)
-				verifyRoutingTableEntry(existingRoutingKey7, expectedRoutingTableEntry)
-				Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when deleting backend with TLS settings", func() {
-			var existingRoutingKey8 models.RoutingKey
-			BeforeEach(func() {
-				existingRoutingKey8 = models.RoutingKey{Port: externalPort6}
-				existingRoutingTableEntry8 := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-10", Port: 8083, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
-						models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
-					},
-				)
-				Expect(routingTable.Set(existingRoutingKey8, existingRoutingTableEntry8)).To(BeTrue())
-
-				mapping := apimodels.NewTcpRouteMapping(
-					routerGroupGuid,
-					externalPort6,
-					"some-ip-10",
-					8083,
-					0,
-					"",
-					nil,
-					ttl,
-					modificationTag,
-					true,
-					"h2,http/1.1",
-				)
-				tcpEvent = routing_api.TcpEvent{
-					TcpRouteMapping: mapping,
-					Action:          "Delete",
-				}
-			})
-
-			It("deletes the backend with matching TLS settings", func() {
-				err := updater.HandleEvent(tcpEvent)
-				Expect(err).NotTo(HaveOccurred())
-				expectedRoutingTableEntry := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
-					},
-				)
-				verifyRoutingTableEntry(existingRoutingKey8, expectedRoutingTableEntry)
-				Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when syncing with mixed TLS configurations", func() {
-			BeforeEach(func() {
-				syncTcpMappings = []apimodels.TcpRouteMapping{
-					apimodels.NewTcpRouteMapping(
-						routerGroupGuid,
-						externalPort6,
-						"some-ip-12",
-						8085,
-						0,
-						"",
-						nil,
-						ttl,
-						modificationTag,
-						true,
-						"h2,http/1.1",
-					),
-					apimodels.NewTcpRouteMapping(
-						routerGroupGuid,
-						externalPort6,
-						"some-ip-13",
-						8086,
-						0,
-						"",
-						nil,
-						ttl,
-						modificationTag,
-						false,
-						"",
-					),
-				}
-				fakeRoutingApiClient.TcpRouteMappingsReturns(syncTcpMappings, nil)
-			})
-
-			It("creates routing table entry with mixed TLS configurations", func() {
-				syncDoneChannel = make(chan struct{})
-				go invokeSyncForTLS(syncDoneChannel)
-				Eventually(syncDoneChannel).Should(BeClosed())
-
-				Expect(routingTable.Size()).To(Equal(1))
-				expectedRoutingTableEntry := models.NewRoutingTableEntry(
-					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-12", Port: 8085, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
-						models.BackendServerInfo{Address: "some-ip-13", Port: 8086, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
-					},
-				)
-				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
-				Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 			})
 		})
 	})
