@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/multierror"
@@ -65,6 +67,8 @@ type RouteSchema struct {
 	HealthCheck          *HealthCheckSchema `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 	ServerCertDomainSAN  string             `json:"server_cert_domain_san,omitempty" yaml:"server_cert_domain_san,omitempty"`
 	SniRoutableSan       string             `json:"sni_routable_san,omitempty" yaml:"sni_routable_san,omitempty"`
+	TerminateFrontendTLS bool               `json:"terminate_frontend_tls,omitempty" yaml:"terminate_frontend_tls,omitempty"`
+	ALPNs                []string           `json:"alpns,omitempty" yaml:"alpns,omitempty"`
 	Options              *Options           `json:"options,omitempty" yaml:"options,omitempty"`
 }
 
@@ -148,6 +152,8 @@ type Route struct {
 	RegistrationInterval time.Duration
 	HealthCheck          *HealthCheck
 	ServerCertDomainSAN  string
+	TerminateFrontendTLS bool
+	ALPNs                []string
 	Options              *Options
 }
 
@@ -351,6 +357,8 @@ func RouteFromSchema(r RouteSchema, index int, host string) (*Route, error) {
 		ServerCertDomainSAN:  r.ServerCertDomainSAN,
 		RegistrationInterval: registrationInterval,
 		HealthCheck:          healthCheck,
+		TerminateFrontendTLS: r.TerminateFrontendTLS,
+		ALPNs:                r.ALPNs,
 		Options:              r.Options,
 	}
 
@@ -360,6 +368,11 @@ func RouteFromSchema(r RouteSchema, index int, host string) (*Route, error) {
 		route.Type = "tcp"
 	}
 	return &route, nil
+}
+
+func (r *Route) GetALPNs() string {
+	slices.Sort(r.ALPNs)
+	return strings.Join(r.ALPNs, ",")
 }
 
 func validatePerRouteLoadBalancingAlgorithm(loadBalancingAlgo LoadBalancingAlgorithm) error {

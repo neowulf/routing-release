@@ -20,6 +20,9 @@ health_check:
   name: health-check-name
   script_path: /path/to/check/executable
   timeout: 5s
-options: 
+terminate_frontend_tls: true
+alpns:
+  - alpn1
+  - alpn2
+options:
   loadbalancing: least-connection
-

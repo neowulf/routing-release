@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-//go:generate counterfeiter . Runner
+//go:generate counterfeiter -o fakes/fake_runner.go . Runner
 
 type Runner interface {
 	Run(outbuf, errbuff *bytes.Buffer) error

@@ -34,9 +34,10 @@ func WriteToFile(data []byte, fileName string) error {
 
 func FileExists(fileName string) bool {
 	_, err := os.Stat(fileName)
-	if err == nil {
-		return true
-	}
-	result := os.IsExist(err)
-	return result
+	return err == nil || os.IsExist(err)
+}
+
+func DirExists(dirName string) bool {
+	info, err := os.Stat(dirName)
+	return err == nil && info.IsDir()
 }
