@@ -82,8 +82,8 @@ var _ = Describe("Updater", func() {
 			existingRoutingKey1 = models.RoutingKey{Port: externalPort1}
 			existingRoutingTableEntry1 = models.NewRoutingTableEntry(
 				[]models.BackendServerInfo{
-					models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-					models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+					models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+					models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 				},
 			)
 			Expect(routingTable.Set(existingRoutingKey1, existingRoutingTableEntry1)).To(BeTrue())
@@ -91,8 +91,8 @@ var _ = Describe("Updater", func() {
 			existingRoutingKey2 = models.RoutingKey{Port: externalPort2}
 			existingRoutingTableEntry2 = models.NewRoutingTableEntry(
 				[]models.BackendServerInfo{
-					models.BackendServerInfo{Address: "some-ip-3", Port: 2345, ModificationTag: modificationTag, TTL: ttl},
-					models.BackendServerInfo{Address: "some-ip-4", Port: 2345, ModificationTag: modificationTag, TTL: ttl},
+					models.BackendServerInfo{Address: "some-ip-3", Port: 2345, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+					models.BackendServerInfo{Address: "some-ip-4", Port: 2345, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 				},
 			)
 			Expect(routingTable.Set(existingRoutingKey2, existingRoutingTableEntry2)).To(BeTrue())
@@ -100,8 +100,8 @@ var _ = Describe("Updater", func() {
 			existingRoutingKey3 = models.RoutingKey{Port: externalPort3}
 			existingRoutingTableEntry3 = models.NewRoutingTableEntry(
 				[]models.BackendServerInfo{
-					models.BackendServerInfo{Address: "some-ip-5", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-1"},
-					models.BackendServerInfo{Address: "some-ip-6", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-2"},
+					models.BackendServerInfo{Address: "some-ip-5", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-1", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
+					models.BackendServerInfo{Address: "some-ip-6", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-2", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
 				},
 			)
 			Expect(routingTable.Set(existingRoutingKey3, existingRoutingTableEntry3)).To(BeTrue())
@@ -124,6 +124,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						modificationTag,
+						true,
+						"h2,http/1.1",
 					)
 					tcpEvent = routing_api.TcpEvent{
 						TcpRouteMapping: mapping,
@@ -137,7 +139,7 @@ var _ = Describe("Updater", func() {
 					tlsPort := 61002
 					expectedRoutingTableEntry := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							models.BackendServerInfo{Address: "some-ip-4", Port: 2346, TTL: ttl, ModificationTag: modificationTag, TLSPort: tlsPort, InstanceID: "meow-instance-guid"},
+							models.BackendServerInfo{Address: "some-ip-4", Port: 2346, TTL: ttl, ModificationTag: modificationTag, TLSPort: tlsPort, InstanceID: "meow-instance-guid", TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 						},
 					)
 					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort4}, expectedRoutingTableEntry)
@@ -167,6 +169,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							newTTL,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -179,8 +183,8 @@ var _ = Describe("Updater", func() {
 						Expect(err).NotTo(HaveOccurred())
 						existingRoutingTableEntry := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: newModificationTag, TTL: newTTL},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: newModificationTag, TTL: newTTL, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						verifyRoutingTableEntry(existingRoutingKey1, existingRoutingTableEntry)
@@ -199,6 +203,8 @@ var _ = Describe("Updater", func() {
 								nil,
 								newTTL,
 								newModificationTag,
+								true,
+								"alpn1,alpn2",
 							)
 							tcpEvent = routing_api.TcpEvent{
 								TcpRouteMapping: mapping,
@@ -211,14 +217,13 @@ var _ = Describe("Updater", func() {
 							Expect(err).NotTo(HaveOccurred())
 							existingRoutingTableEntry := models.NewRoutingTableEntry(
 								[]models.BackendServerInfo{
-									models.BackendServerInfo{Address: "some-ip-5", Port: 2346, ModificationTag: newModificationTag, TTL: newTTL, TLSPort: 61002, InstanceID: "meow-guid-1"},
-									models.BackendServerInfo{Address: "some-ip-6", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-2"},
+									models.BackendServerInfo{Address: "some-ip-5", Port: 2346, ModificationTag: newModificationTag, TTL: newTTL, TLSPort: 61002, InstanceID: "meow-guid-1", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
+									models.BackendServerInfo{Address: "some-ip-6", Port: 2346, ModificationTag: modificationTag, TTL: ttl, TLSPort: 61002, InstanceID: "meow-guid-2", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
 								},
 							)
 							verifyRoutingTableEntry(existingRoutingKey3, existingRoutingTableEntry)
 							Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(0))
 						})
-
 					})
 				})
 
@@ -234,6 +239,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -246,9 +253,9 @@ var _ = Describe("Updater", func() {
 						Expect(err).NotTo(HaveOccurred())
 						expectedRoutingTableEntry := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-5", Port: 1234, ModificationTag: newModificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-5", Port: 1234, ModificationTag: newModificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						verifyRoutingTableEntry(existingRoutingKey1, expectedRoutingTableEntry)
@@ -265,6 +272,74 @@ var _ = Describe("Updater", func() {
 							Expect(err).To(HaveOccurred())
 						})
 					})
+				})
+			})
+
+			Context("when TerminateFrontendTLS is true and ALPNs are specified", func() {
+				BeforeEach(func() {
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-7",
+						8080,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						true,
+						"h2,http/1.1,alpn3",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Upsert",
+					}
+				})
+
+				It("creates routing table entry with TLS termination and ALPNs", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-7", Port: 8080, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1,alpn3"},
+						},
+					)
+					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("when TerminateFrontendTLS is false and ALPNs are empty", func() {
+				BeforeEach(func() {
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-8",
+						8081,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						false,
+						"",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Upsert",
+					}
+				})
+
+				It("creates routing table entry without TLS termination", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-8", Port: 8081, TTL: ttl, ModificationTag: modificationTag, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort6}, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 				})
 			})
 		})
@@ -289,6 +364,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						newModificationTag,
+						false,
+						"",
 					)
 					tcpEvent = routing_api.TcpEvent{
 						TcpRouteMapping: mapping,
@@ -314,8 +391,8 @@ var _ = Describe("Updater", func() {
 						existingRoutingKey5 = models.RoutingKey{Port: externalPort5}
 						existingRoutingTableEntry5 = models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						Expect(routingTable.Set(existingRoutingKey5, existingRoutingTableEntry5)).To(BeTrue())
@@ -329,6 +406,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -341,7 +420,7 @@ var _ = Describe("Updater", func() {
 						Expect(err).NotTo(HaveOccurred())
 						expectedRoutingTableEntry := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						verifyRoutingTableEntry(existingRoutingKey5, expectedRoutingTableEntry)
@@ -369,8 +448,8 @@ var _ = Describe("Updater", func() {
 						existingRoutingKey6 = models.RoutingKey{Port: externalPort5}
 						existingRoutingTableEntry6 = models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						Expect(routingTable.Set(existingRoutingKey6, existingRoutingTableEntry6)).To(BeTrue())
@@ -385,6 +464,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							newModificationTag,
+							false,
+							"",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -397,8 +478,8 @@ var _ = Describe("Updater", func() {
 						Expect(err).NotTo(HaveOccurred())
 						expectedRoutingTableEntry := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						verifyRoutingTableEntry(existingRoutingKey6, expectedRoutingTableEntry)
@@ -415,8 +496,8 @@ var _ = Describe("Updater", func() {
 						existingRoutingKey5 = models.RoutingKey{Port: externalPort5}
 						existingRoutingTableEntry5 = models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, TLSPort: 60012, InstanceID: "another-meow-for-the-back", ModificationTag: modificationTag, TTL: ttl},
-								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, TLSPort: 60013, InstanceID: "griffin", ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, TLSPort: 60012, InstanceID: "another-meow-for-the-back", ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 1234, TLSPort: 60013, InstanceID: "griffin", ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 							},
 						)
 						Expect(routingTable.Set(existingRoutingKey5, existingRoutingTableEntry5)).To(BeTrue())
@@ -430,6 +511,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							true,
+							"h2,http/1.1",
 						)
 						tcpEvent = routing_api.TcpEvent{
 							TcpRouteMapping: mapping,
@@ -442,12 +525,56 @@ var _ = Describe("Updater", func() {
 						Expect(err).NotTo(HaveOccurred())
 						expectedRoutingTableEntry := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, TLSPort: 60012, InstanceID: "another-meow-for-the-back", ModificationTag: modificationTag, TTL: ttl},
+								models.BackendServerInfo{Address: "some-ip-1", Port: 1234, TLSPort: 60012, InstanceID: "another-meow-for-the-back", ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 							},
 						)
 						verifyRoutingTableEntry(existingRoutingKey5, expectedRoutingTableEntry)
 						Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 					})
+				})
+			})
+
+			Context("when deleting backend with TLS settings", func() {
+				var existingRoutingKey8 models.RoutingKey
+				BeforeEach(func() {
+					existingRoutingKey8 = models.RoutingKey{Port: externalPort6}
+					existingRoutingTableEntry8 := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-10", Port: 8083, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+							models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					Expect(routingTable.Set(existingRoutingKey8, existingRoutingTableEntry8)).To(BeTrue())
+
+					mapping := apimodels.NewTcpRouteMapping(
+						routerGroupGuid,
+						externalPort6,
+						"some-ip-10",
+						8083,
+						0,
+						"",
+						nil,
+						ttl,
+						modificationTag,
+						true,
+						"h2,http/1.1",
+					)
+					tcpEvent = routing_api.TcpEvent{
+						TcpRouteMapping: mapping,
+						Action:          "Delete",
+					}
+				})
+
+				It("deletes the backend with matching TLS settings", func() {
+					err := updater.HandleEvent(tcpEvent)
+					Expect(err).NotTo(HaveOccurred())
+					expectedRoutingTableEntry := models.NewRoutingTableEntry(
+						[]models.BackendServerInfo{
+							models.BackendServerInfo{Address: "some-ip-11", Port: 8084, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						},
+					)
+					verifyRoutingTableEntry(existingRoutingKey8, expectedRoutingTableEntry)
+					Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(1))
 				})
 			})
 		})
@@ -478,6 +605,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -489,6 +618,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					false,
+					"",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -500,6 +631,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					true,
+					"h2,http/1.1",
 				),
 				apimodels.NewTcpRouteMapping(
 					routerGroupGuid,
@@ -511,6 +644,8 @@ var _ = Describe("Updater", func() {
 					nil,
 					ttl,
 					modificationTag,
+					true,
+					"h2,http/1.1",
 				),
 			}
 		})
@@ -530,15 +665,15 @@ var _ = Describe("Updater", func() {
 				Expect(routingTable.Size()).To(Equal(2))
 				expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl},
-						models.BackendServerInfo{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl},
+						models.BackendServerInfo{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						models.BackendServerInfo{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
 				expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						models.BackendServerInfo{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
-						models.BackendServerInfo{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
+						models.BackendServerInfo{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+						models.BackendServerInfo{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
@@ -549,16 +684,16 @@ var _ = Describe("Updater", func() {
 				BeforeEach(func() {
 					expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					routingTable.Set(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
 
 					expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+							{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 						},
 					)
 					routingTable.Set(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
@@ -589,6 +724,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 						apimodels.NewTcpRouteMapping(
 							routerGroupGuid,
@@ -600,6 +737,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					}
 
@@ -607,16 +746,16 @@ var _ = Describe("Updater", func() {
 
 					expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					routingTable.Set(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
 
 					expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+							{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 						},
 					)
 					routingTable.Set(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
@@ -672,6 +811,8 @@ var _ = Describe("Updater", func() {
 								nil,
 								0,
 								modificationTag,
+								false,
+								"",
 							),
 							Action: "Upsert",
 						}
@@ -690,7 +831,7 @@ var _ = Describe("Updater", func() {
 						Expect(routingTable.Size()).To(Equal(1))
 						expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 							[]models.BackendServerInfo{
-								models.BackendServerInfo{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: 0},
+								models.BackendServerInfo{Address: "some-ip-2", Port: 61001, ModificationTag: modificationTag, TTL: 0, TerminateFrontendTLS: false, ALPNs: ""},
 							},
 						)
 						verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
@@ -712,6 +853,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							0,
 							modificationTag,
+							false,
+							"",
 						),
 						Action: "Delete",
 					}
@@ -730,30 +873,32 @@ var _ = Describe("Updater", func() {
 					Expect(routingTable.Size()).To(Equal(2))
 					expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							models.BackendServerInfo{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl},
+							models.BackendServerInfo{Address: "some-ip-1", Port: 61000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
 					expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							models.BackendServerInfo{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
-							models.BackendServerInfo{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl},
+							models.BackendServerInfo{Address: "some-ip-3", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+							models.BackendServerInfo{Address: "some-ip-4", Port: 60000, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 						},
 					)
 					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
 				})
+
 				Context("when cached events come in during sync", func() {
 					var originalEntries map[models.RoutingKey]models.RoutingTableEntry
+
 					BeforeEach(func() {
 						// Prepopulate routing table
 						originalEntries = map[models.RoutingKey]models.RoutingTableEntry{
 							{Port: 2222, SniHostname: ""}: {
 								Backends: map[models.BackendServerKey]models.BackendServerDetails{
-									{Address: "some-ip-1", Port: 61000}: {
+									{Address: "some-ip-1", Port: 61000, TerminateFrontendTLS: false, ALPNs: ""}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
-									{Address: "some-ip-2", Port: 61001}: {
+									{Address: "some-ip-2", Port: 61001, TerminateFrontendTLS: false, ALPNs: ""}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
@@ -761,11 +906,11 @@ var _ = Describe("Updater", func() {
 							},
 							{Port: 2223, SniHostname: ""}: {
 								Backends: map[models.BackendServerKey]models.BackendServerDetails{
-									{Address: "some-ip-3", Port: 60000}: {
+									{Address: "some-ip-3", Port: 60000, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
-									{Address: "some-ip-4", Port: 60000}: {
+									{Address: "some-ip-4", Port: 60000, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}: {
 										ModificationTag: apimodels.ModificationTag{Guid: "guid-1", Index: 0},
 										TTL:             60,
 									},
@@ -777,6 +922,7 @@ var _ = Describe("Updater", func() {
 							routingTable.Entries[k] = v
 						}
 					})
+
 					Context("and the events don't constitute substantive changes", func() {
 						It("does not reload haproxy", func() {
 							// ensure the change hasn't made it to the table
@@ -800,6 +946,8 @@ var _ = Describe("Updater", func() {
 									nil,
 									22,
 									apimodels.ModificationTag{Guid: "guid-1", Index: 1},
+									false,
+									"",
 								),
 								Action: "Upsert",
 							}
@@ -815,6 +963,7 @@ var _ = Describe("Updater", func() {
 							Expect(fakeConfigurer.ConfigureCallCount()).To(Equal(0))         // ensure it didn't reload haproxy
 						})
 					})
+
 					Context("and the events modify more than just modification tags", func() {
 						It("reloads haproxy", func() {
 							// ensure the change hasn't made it to the table
@@ -838,6 +987,8 @@ var _ = Describe("Updater", func() {
 									nil,
 									22,
 									newModificationTag,
+									false,
+									"",
 								),
 								Action: "Upsert",
 							}
@@ -864,8 +1015,8 @@ var _ = Describe("Updater", func() {
 					existingRoutingKey1 = models.RoutingKey{Port: externalPort1}
 					existingRoutingTableEntry1 = models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					Expect(routingTable.Set(existingRoutingKey1, existingRoutingTableEntry1)).To(BeTrue())
@@ -881,8 +1032,8 @@ var _ = Describe("Updater", func() {
 					Expect(routingTable.Size()).To(Equal(1))
 					expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
@@ -895,8 +1046,8 @@ var _ = Describe("Updater", func() {
 					existingRoutingKey1 = models.RoutingKey{Port: externalPort1}
 					existingRoutingTableEntry1 = models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					Expect(routingTable.Set(existingRoutingKey1, existingRoutingTableEntry1)).To(BeTrue())
@@ -916,8 +1067,8 @@ var _ = Describe("Updater", func() {
 					Expect(routingTable.Size()).To(Equal(1))
 					expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 						[]models.BackendServerInfo{
-							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+							{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+							{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 						},
 					)
 					verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
@@ -931,8 +1082,8 @@ var _ = Describe("Updater", func() {
 				existingRoutingKey1 = models.RoutingKey{Port: externalPort1}
 				existingRoutingTableEntry1 = models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-						{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 					},
 				)
 				Expect(routingTable.Set(existingRoutingKey1, existingRoutingTableEntry1)).To(BeTrue())
@@ -948,8 +1099,8 @@ var _ = Describe("Updater", func() {
 				Expect(routingTable.Size()).To(Equal(1))
 				expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
-						{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl},
+						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
+						{Address: "some-ip-2", Port: 1234, ModificationTag: modificationTag, TTL: ttl, TerminateFrontendTLS: false, ALPNs: ""},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
@@ -961,9 +1112,9 @@ var _ = Describe("Updater", func() {
 	Describe("Prune", func() {
 		BeforeEach(func() {
 			routingKey1 := models.RoutingKey{Port: externalPort1}
-			backendServerKey := models.BackendServerKey{Address: "some-ip-1", Port: 1234}
+			backendServerKey := models.BackendServerKey{Address: "some-ip-1", Port: 1234, TerminateFrontendTLS: false, ALPNs: ""}
 			backendServerDetails := models.BackendServerDetails{ModificationTag: modificationTag, UpdatedTime: time.Now().Add(-50 * time.Second)}
-			backendServerKey2 := models.BackendServerKey{Address: "some-ip-2", Port: 1235}
+			backendServerKey2 := models.BackendServerKey{Address: "some-ip-2", Port: 1235, TerminateFrontendTLS: false, ALPNs: ""}
 			backendServerDetails2 := models.BackendServerDetails{ModificationTag: modificationTag, UpdatedTime: time.Now().Add(-50 * time.Second)}
 			backends := map[models.BackendServerKey]models.BackendServerDetails{
 				backendServerKey:  backendServerDetails,
@@ -974,9 +1125,9 @@ var _ = Describe("Updater", func() {
 			Expect(updated).To(BeTrue())
 
 			routingKey2 := models.RoutingKey{Port: externalPort2}
-			backendServerKey = models.BackendServerKey{Address: "some-ip-3", Port: 1234}
+			backendServerKey = models.BackendServerKey{Address: "some-ip-3", Port: 1234, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}
 			backendServerDetails = models.BackendServerDetails{ModificationTag: modificationTag, UpdatedTime: time.Now().Add(-10 * time.Second)}
-			backendServerKey2 = models.BackendServerKey{Address: "some-ip-4", Port: 1235}
+			backendServerKey2 = models.BackendServerKey{Address: "some-ip-4", Port: 1235, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"}
 			backendServerDetails2 = models.BackendServerDetails{ModificationTag: modificationTag, UpdatedTime: time.Now()}
 			backends = map[models.BackendServerKey]models.BackendServerDetails{
 				backendServerKey:  backendServerDetails,
@@ -996,17 +1147,19 @@ var _ = Describe("Updater", func() {
 				updater.PruneStaleRoutes()
 				Expect(fakeTokenFetcher.FetchTokenCallCount()).To(Equal(0))
 				Expect(routingTable.Size()).To(Equal(2))
+
 				expectedRoutingTableEntry1 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag},
-						{Address: "some-ip-2", Port: 1235, ModificationTag: modificationTag},
+						{Address: "some-ip-1", Port: 1234, ModificationTag: modificationTag, TerminateFrontendTLS: false, ALPNs: ""},
+						{Address: "some-ip-2", Port: 1235, ModificationTag: modificationTag, TerminateFrontendTLS: false, ALPNs: ""},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort1}, expectedRoutingTableEntry1)
+
 				expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						{Address: "some-ip-3", Port: 1234, ModificationTag: modificationTag},
-						{Address: "some-ip-4", Port: 1235, ModificationTag: modificationTag},
+						{Address: "some-ip-3", Port: 1234, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+						{Address: "some-ip-4", Port: 1235, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
@@ -1028,8 +1181,8 @@ var _ = Describe("Updater", func() {
 				Expect(routingTable.Size()).To(Equal(1))
 				expectedRoutingTableEntry2 := models.NewRoutingTableEntry(
 					[]models.BackendServerInfo{
-						{Address: "some-ip-3", Port: 1234, ModificationTag: modificationTag},
-						{Address: "some-ip-4", Port: 1235, ModificationTag: modificationTag},
+						{Address: "some-ip-3", Port: 1234, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
+						{Address: "some-ip-4", Port: 1235, ModificationTag: modificationTag, TerminateFrontendTLS: true, ALPNs: "h2,http/1.1"},
 					},
 				)
 				verifyRoutingTableEntry(models.RoutingKey{Port: externalPort2}, expectedRoutingTableEntry2)
@@ -1137,6 +1290,8 @@ var _ = Describe("Updater", func() {
 						nil,
 						ttl,
 						modificationTag,
+						false,
+						"",
 					),
 				}
 				fakeRoutingApiClient.TcpRouteMappingsReturns(tcpMappings, nil)
@@ -1167,6 +1322,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					}
 					fakeRoutingApiClient.TcpRouteMappingsReturns(tcpMappings, nil)
@@ -1198,6 +1355,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -1227,6 +1386,8 @@ var _ = Describe("Updater", func() {
 							nil,
 							ttl,
 							modificationTag,
+							false,
+							"",
 						),
 					})
 					Expect(err).NotTo(HaveOccurred())

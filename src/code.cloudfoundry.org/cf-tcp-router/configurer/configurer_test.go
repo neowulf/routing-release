@@ -16,6 +16,7 @@ var _ = Describe("Configurer", func() {
 
 	Describe("NewConfigurer", func() {
 		var backendTlsCfg config.BackendTLSConfig
+		var frontendTlsCfg config.FrontendTLSConfig
 		BeforeEach(func() {
 			caFile, _ := tlshelpers.GenerateCa()
 			_, clientCertFile, _, _ := tlshelpers.GenerateCaAndMutualTlsCerts()
@@ -28,7 +29,7 @@ var _ = Describe("Configurer", func() {
 		Context("when 'haproxy' tcp load balancer is passed", func() {
 			It("should return haproxy configurer", func() {
 				routeConfigurer := configurer.NewConfigurer(logger,
-					configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, backendTlsCfg)
+					configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, backendTlsCfg, frontendTlsCfg)
 				Expect(routeConfigurer).ShouldNot(BeNil())
 				expectedType := reflect.PointerTo(reflect.TypeOf(haproxy.Configurer{}))
 				value := reflect.ValueOf(routeConfigurer)
@@ -38,7 +39,7 @@ var _ = Describe("Configurer", func() {
 			Context("when invalid config file is passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "", nil, nil, backendTlsCfg)
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "", nil, nil, backendTlsCfg, frontendTlsCfg)
 					}).Should(Panic())
 				})
 			})
@@ -46,7 +47,7 @@ var _ = Describe("Configurer", func() {
 			Context("when invalid base config file is passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "", "haproxy/fixtures/haproxy.cfg", nil, nil, backendTlsCfg)
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "", "haproxy/fixtures/haproxy.cfg", nil, nil, backendTlsCfg, frontendTlsCfg)
 					}).Should(Panic())
 				})
 			})
@@ -54,7 +55,7 @@ var _ = Describe("Configurer", func() {
 			Context("when invalid CA file is passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{CACertificatePath: "nonexistent/file"})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{CACertificatePath: "nonexistent/file"}, frontendTlsCfg)
 					}).Should(Panic())
 				})
 			})
@@ -62,14 +63,35 @@ var _ = Describe("Configurer", func() {
 			Context("when invalid ClientCertAndKey file is passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{ClientCertAndKeyPath: "nonexistent/file"})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{ClientCertAndKeyPath: "nonexistent/file"}, frontendTlsCfg)
+					}).Should(Panic())
+				})
+			})
+			Context("when FrontendTLS is enabled and empty CertDir are passed", func() {
+				It("should panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true})
+					}).ShouldNot(Panic())
+				})
+			})
+			Context("when FrontendTLS is enabled and invalid CertDir is passed", func() {
+				It("should panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "foobar"})
+					}).Should(Panic())
+				})
+			})
+			Context("when FrontendTLS is enabled and valid CertDir is passed", func() {
+				It("should not panic", func() {
+					Expect(func() {
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "fixtures"})
 					}).Should(Panic())
 				})
 			})
 			Context("when empty CA + ClientCertAndKey paths are passed", func() {
 				It("should not panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, frontendTlsCfg)
 					}).ShouldNot(Panic())
 				})
 			})
@@ -78,7 +100,7 @@ var _ = Describe("Configurer", func() {
 		Context("when non-supported tcp load balancer is passed", func() {
 			It("should panic", func() {
 				Expect(func() {
-					configurer.NewConfigurer(logger, "not-supported", "some-base-config-file", "some-config-file", nil, nil, backendTlsCfg)
+					configurer.NewConfigurer(logger, "not-supported", "some-base-config-file", "some-config-file", nil, nil, backendTlsCfg, frontendTlsCfg)
 				}).Should(Panic())
 			})
 		})
@@ -86,7 +108,7 @@ var _ = Describe("Configurer", func() {
 		Context("when empty tcp load balancer is passed", func() {
 			It("should panic", func() {
 				Expect(func() {
-					configurer.NewConfigurer(logger, "", "some-base-config-file", "some-config-file", nil, nil, backendTlsCfg)
+					configurer.NewConfigurer(logger, "", "some-base-config-file", "some-config-file", nil, nil, backendTlsCfg, frontendTlsCfg)
 				}).Should(Panic())
 			})
 		})

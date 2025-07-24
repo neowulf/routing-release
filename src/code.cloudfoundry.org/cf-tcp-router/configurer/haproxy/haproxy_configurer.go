@@ -16,6 +16,7 @@ import (
 const (
 	ErrRouterConfigFileNotFound = "Configuration file not found"
 	ErrRouterCAFileNotFound     = "CA file not found"
+	ErrRouterCertDirNotFound    = "Certificate directory not found"
 )
 
 type Configurer struct {
@@ -25,23 +26,30 @@ type Configurer struct {
 	configFilePath     string
 	configFileLock     *sync.Mutex
 	backendTlsCfg      config.BackendTLSConfig
+	frontendTlsCfg     config.FrontendTLSConfig
 	monitor            monitor.Monitor
 	scriptRunner       ScriptRunner
 }
 
-func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig) (*Configurer, error) {
+func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) (*Configurer, error) {
 	if !utils.FileExists(baseConfigFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, baseConfigFilePath)
 	}
+
 	if !utils.FileExists(configFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, configFilePath)
 	}
+
 	if backendTlsCfg.CACertificatePath != "" && !utils.FileExists(backendTlsCfg.CACertificatePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.CACertificatePath)
 	}
 
 	if backendTlsCfg.ClientCertAndKeyPath != "" && !utils.FileExists(backendTlsCfg.ClientCertAndKeyPath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.ClientCertAndKeyPath)
+	}
+
+	if frontendTlsCfg.CertificateDir != "" && !utils.DirExists(frontendTlsCfg.CertificateDir) {
+		return nil, fmt.Errorf("%s: [%s]", ErrRouterCertDirNotFound, frontendTlsCfg.CertificateDir)
 	}
 
 	return &Configurer{
@@ -51,6 +59,7 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 		configFilePath:     configFilePath,
 		configFileLock:     new(sync.Mutex),
 		backendTlsCfg:      backendTlsCfg,
+		frontendTlsCfg:     frontendTlsCfg,
 		monitor:            monitor,
 		scriptRunner:       scriptRunner,
 	}, nil
@@ -79,7 +88,7 @@ func (h *Configurer) Configure(routingTable models.RoutingTable, forceHealthChec
 	}
 
 	haproxyConf := models.NewHAProxyConfig(routingTable, h.logger)
-	marshalledConf := h.configMarshaller.Marshal(haproxyConf, h.backendTlsCfg)
+	marshalledConf := h.configMarshaller.Marshal(haproxyConf, h.backendTlsCfg, h.frontendTlsCfg)
 
 	_, err = buff.Write([]byte(marshalledConf))
 	if err != nil {

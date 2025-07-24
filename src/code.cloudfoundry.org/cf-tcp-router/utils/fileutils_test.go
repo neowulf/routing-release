@@ -120,4 +120,23 @@ var _ = Describe("Fileutils", func() {
 		})
 
 	})
+
+	Describe("DirExists", func() {
+		Context("when dir exists", func() {
+			It("it returns true", func() {
+				Expect(utils.DirExists("fixtures")).To(Equal(true))
+			})
+		})
+		Context("when dir does not exist", func() {
+			It("it returns false", func() {
+				Expect(utils.DirExists("/fake/path")).To(Equal(false))
+			})
+		})
+		Context("when a file path was provided", func() {
+			It("it returns false", func() {
+				Expect(utils.DirExists("fixtures/non_existing_test_file")).To(Equal(false))
+			})
+		})
+
+	})
 })
