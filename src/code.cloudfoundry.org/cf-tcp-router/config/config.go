@@ -162,6 +162,13 @@ func (c *Config) initConfigFromFile(path string) error {
 		c.BackendTLS.ClientCertAndKeyPath = ""
 	}
 
+	// bosh ssh -d cf-73bb2cbdc75f05f1a50b tcp_router/3b12d728-9fc3-427d-8b7c-a478985a65d9
+	// cert.pem		// may contain the intermediate certificates
+	// cert.pem.key
+	// cat cert.pem key.pem > combined.pem
+	c.FrontendTLS.Enabled = true
+	c.FrontendTLS.CertificateDir = "/var/vcap/jobs/tcp_router/config/certs/tcp-router/frontend"
+
 	if c.FrontendTLS.Enabled {
 		certPath := c.FrontendTLS.CertificateDir
 		if certPath == "" {
