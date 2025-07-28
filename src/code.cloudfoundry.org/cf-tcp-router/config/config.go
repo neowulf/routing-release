@@ -138,8 +138,8 @@ func (c *Config) initConfigFromFile(path string) error {
 			dirPath := filepath.Join(basePath, name)
 			os.MkdirAll(dirPath, 0755)
 
-			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.cert.pem", name))
-			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.key.pem", name))
+			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
+			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
 
 			os.WriteFile(certFilePath, []byte(certChain), 0644)
 
