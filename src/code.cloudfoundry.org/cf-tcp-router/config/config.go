@@ -256,10 +256,7 @@ func certHasSAN(cert *x509.Certificate) bool {
 		}
 	}
 
-	hasSANEntries := len(cert.DNSNames) > 0 ||
-		len(cert.EmailAddresses) > 0 ||
-		len(cert.IPAddresses) > 0 ||
-		len(cert.URIs) > 0
+	hasDNSEntries := len(cert.DNSNames) > 0
 
-	return hasSANExtension || hasSANEntries
+	return hasSANExtension || hasDNSEntries
 }
