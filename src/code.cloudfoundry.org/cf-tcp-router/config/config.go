@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,7 +38,7 @@ type FrontendTLSConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5.1-crt
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#3.12-load
-	CertificateDir string `yaml:"cert_dir"`
+	CertificateDir string `yaml:"cert_path"`
 }
 
 type BackendTLSConfig struct {
@@ -46,15 +47,22 @@ type BackendTLSConfig struct {
 	ClientCertAndKeyPath string `yaml:"client_cert_and_key_path"`
 }
 
+type FrontendTLSJob struct {
+	Name       string `yaml:"name"`
+	CertChain  string `yaml:"cert_chain"`
+	PrivateKey string `yaml:"private_key"`
+}
+
 type Config struct {
-	OAuth                        OAuthConfig       `yaml:"oauth"`
-	RoutingAPI                   RoutingAPIConfig  `yaml:"routing_api"`
-	HaProxyPidFile               string            `yaml:"haproxy_pid_file"`
-	IsolationSegments            []string          `yaml:"isolation_segments"`
-	ReservedSystemComponentPorts []uint16          `yaml:"reserved_system_component_ports"`
-	DrainWaitDuration            time.Duration     `yaml:"drain_wait"`
-	BackendTLS                   BackendTLSConfig  `yaml:"backend_tls"`
-	FrontendTLS                  FrontendTLSConfig `yaml:"frontend_tls"`
+	OAuth                        OAuthConfig         `yaml:"oauth"`
+	RoutingAPI                   RoutingAPIConfig    `yaml:"routing_api"`
+	HaProxyPidFile               string              `yaml:"haproxy_pid_file"`
+	IsolationSegments            []string            `yaml:"isolation_segments"`
+	ReservedSystemComponentPorts []uint16            `yaml:"reserved_system_component_ports"`
+	DrainWaitDuration            time.Duration       `yaml:"drain_wait"`
+	BackendTLS                   BackendTLSConfig    `yaml:"backend_tls"`
+	FrontendTLS                  []FrontendTLSConfig `yaml:"frontend_tls_pem"`
+	FrontendTLSJob               []FrontendTLSJob    `yaml:"frontend_tls"`
 }
 
 const DrainWaitDefault = 20 * time.Second
@@ -66,6 +74,13 @@ func New(path string) (*Config, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+func (c *Config) FrontendTLSJobBasePath() string {
+	if bp := os.Getenv("FRONTEND_TLS_BASE_PATH"); bp != "" {
+		return bp
+	}
+	return "/var/vcap/jobs/tcp_router/config/keys/tcp-router/frontend"
 }
 
 func (c *Config) initConfigFromFile(path string) error {
@@ -87,6 +102,53 @@ func (c *Config) initConfigFromFile(path string) error {
 
 	if c.DrainWaitDuration < 0 {
 		c.DrainWaitDuration = DrainWaitDefault
+	}
+
+	if len(c.FrontendTLSJob) > 0 {
+		var outputs []FrontendTLSConfig
+		basePath := c.FrontendTLSJobBasePath()
+		for i, cert := range c.FrontendTLSJob {
+
+			name := strings.TrimSpace(cert.Name)
+			certChain := strings.TrimSpace(cert.CertChain)
+			privateKey := strings.TrimSpace(cert.PrivateKey)
+
+			if name == "" || certChain == "" || privateKey == "" {
+				return fmt.Errorf("frontend_tls[%d] must include name, cert_chain, and private_key", i)
+			}
+
+			block, _ := pem.Decode([]byte(certChain))
+			if block == nil {
+				return errors.New("failed to parse PEM block")
+			}
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return err
+			}
+
+			hasSAN := certHasSAN(cert)
+			if !hasSAN {
+				return fmt.Errorf("frontend_tls[%d].cert_chain must include a subjectAltName extension", i)
+			}
+
+			dirPath := filepath.Join(basePath, name)
+			os.MkdirAll(dirPath, 0755)
+
+			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
+			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
+
+			os.WriteFile(certFilePath, []byte(certChain), 0644)
+
+			os.WriteFile(keyFilePath, []byte(privateKey), 0600)
+
+			outputs = append(outputs, FrontendTLSConfig{
+				Enabled:        true,
+				CertificateDir: dirPath,
+			})
+		}
+
+		c.FrontendTLS = outputs
+
 	}
 
 	if c.BackendTLS.Enabled {
@@ -162,21 +224,19 @@ func (c *Config) initConfigFromFile(path string) error {
 		c.BackendTLS.ClientCertAndKeyPath = ""
 	}
 
-	if c.FrontendTLS.Enabled {
-		certPath := c.FrontendTLS.CertificateDir
-		if certPath == "" {
-			return errors.New("frontend_tls.cert_path is required")
-		}
+	return nil
+}
 
-		info, err := os.Stat(certPath)
-		if err != nil {
-			return fmt.Errorf("Error checking directory %q: %s", certPath, err)
-		} else if !info.IsDir() {
-			return fmt.Errorf("Path %q exists but is not a directory", certPath)
+func certHasSAN(cert *x509.Certificate) bool {
+	hasSANExtension := false
+	for _, ext := range cert.Extensions {
+		if ext.Id.String() == "2.5.29.17" {
+			hasSANExtension = true
+			break
 		}
-	} else {
-		c.FrontendTLS.CertificateDir = ""
 	}
 
-	return nil
+	hasDNSEntries := len(cert.DNSNames) > 0
+
+	return hasSANExtension || hasDNSEntries
 }

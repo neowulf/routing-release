@@ -3,6 +3,7 @@ package config_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	tlshelpers "code.cloudfoundry.org/cf-routing-test-helpers/tls"
@@ -160,44 +161,6 @@ var _ = Describe("Config", Serial, func() {
 		})
 	})
 
-	Context("when frontend_tls", func() {
-		Context("is enabled", func() {
-			Context("when cert_dir is not specified", func() {
-				It("returns an error", func() {
-					_, err := config.New("fixtures/invalid_frontend_tls.yml")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("frontend_tls.cert_path is required"))
-				})
-			})
-			Context("when cert_dir is pointing to a file", func() {
-				It("all of the frontend_tls values are set", func() {
-					_, err := config.New("fixtures/invalid_frontend_tls_1.yml")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(`Path "fixtures/ca.pem" exists but is not a directory`))
-				})
-			})
-			Context("when cert_dir is pointing to a non existing directory", func() {
-				It("returns an error", func() {
-					_, err := config.New("fixtures/invalid_frontend_tls_2.yml")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(`Error checking directory "invalid_dir": stat invalid_dir: no such file or directory`))
-				})
-			})
-		})
-
-		Context("is disabled", func() {
-			Context("when cert_dir is specified", func() {
-				It("does not set any of the frontend_tls values", func() {
-					cfg, err := config.New("fixtures/disabled_frontend_tls.yml")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(cfg.FrontendTLS).To(Equal(config.FrontendTLSConfig{
-						Enabled: false,
-					}))
-				})
-			})
-		})
-	})
-
 	Context("when haproxy pid file is missing", func() {
 		It("return error", func() {
 			_, err := config.New("fixtures/no_haproxy.yml")
@@ -249,4 +212,74 @@ var _ = Describe("Config", Serial, func() {
 			Expect(cfg.DrainWaitDuration).To(Equal(20 * time.Second))
 		})
 	})
+
+	Context("When frontend_tls is enabled", func() {
+		var (
+			tmpDir string
+			cfg    *config.Config
+			err    error
+		)
+
+		BeforeEach(func() {
+			tmpDir = GinkgoT().TempDir()
+			os.Setenv("FRONTEND_TLS_BASE_PATH", tmpDir)
+		})
+
+		AfterEach(func() {
+			os.Unsetenv("FRONTEND_TLS_BASE_PATH")
+		})
+
+		Context("with valid cert and key", func() {
+			BeforeEach(func() {
+				cfg, err = config.New("fixtures/valid_frontend_cert.yml")
+			})
+
+			It("loads config without error", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("adds the certs and keys to the expected directories", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.FrontendTLS).To(HaveLen(2))
+
+				Expect(cfg.FrontendTLS[0]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "prod"),
+				}))
+
+				Expect(cfg.FrontendTLS[1]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "dev"),
+				}))
+			})
+
+			It("writes the correct cert and key files", func() {
+				for i, name := range []string{"prod", "dev"} {
+					certPath := filepath.Join(tmpDir, name, name+".pem")
+					keyPath := filepath.Join(tmpDir, name, name+".pem.key")
+
+					Expect(certPath).To(BeAnExistingFile())
+					Expect(keyPath).To(BeAnExistingFile())
+
+					certData, certErr := os.ReadFile(certPath)
+					Expect(certErr).NotTo(HaveOccurred())
+					Expect(string(certData)).To(Equal(cfg.FrontendTLSJob[i].CertChain))
+
+					keyData, keyErr := os.ReadFile(keyPath)
+					Expect(keyErr).NotTo(HaveOccurred())
+					Expect(string(keyData)).To(Equal(cfg.FrontendTLSJob[i].PrivateKey))
+				}
+			})
+		})
+
+		Context("with invalid frontend_tls config", func() {
+			It("should fail if cert_chain is missing SAN information", func() {
+				_, err := config.New("fixtures/invalid_frontend_cert.yml")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0].cert_chain must include a subjectAltName extension"))
+			})
+
+		})
+	})
+
 })
