@@ -53,10 +53,14 @@ func main() {
 		logger.Fatal("error parsing file: %s\n", err)
 	}
 
+	logger.Info("wat in this configSchema", lager.Data{"configSchema-debug": configSchema})
+
 	c, err := configSchema.ParseSchemaAndSetDefaultsToConfig()
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	logger.Info("wat in this c", lager.Data{"c-debug": c})
 
 	hc := healthchecker.NewHealthChecker(logger)
 

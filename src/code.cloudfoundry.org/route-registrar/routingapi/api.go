@@ -127,11 +127,15 @@ func (r *RoutingAPI) RegisterRoute(route config.Route) error {
 		return err
 	}
 
+	r.logger.Info("wat in this route", lager.Data{"route-debug": route})
+
 	routeMapping, err := r.makeTcpRouteMapping(route)
 	if err != nil {
 		r.logger.Error("Failed to make route mapping", err, lager.Data{"route": route})
 		return err
 	}
+
+	r.logger.Info("wat in this routeMapping", lager.Data{"routeMapping-debug": routeMapping})
 
 	err = r.apiClient.UpsertTcpRouteMappings([]models.TcpRouteMapping{
 		routeMapping})

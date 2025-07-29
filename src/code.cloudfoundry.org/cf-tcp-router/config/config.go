@@ -168,7 +168,8 @@ func (c *Config) initConfigFromFile(path string) error {
 	// cat cert.pem key.pem > combined.pem
 	c.FrontendTLS.Enabled = true
 	c.FrontendTLS.CertificateDir = "/var/vcap/jobs/tcp_router/config/certs/tcp-router/frontend"
-
+	os.Mkdir(c.FrontendTLS.CertificateDir, 0750)
+	
 	if c.FrontendTLS.Enabled {
 		certPath := c.FrontendTLS.CertificateDir
 		if certPath == "" {
