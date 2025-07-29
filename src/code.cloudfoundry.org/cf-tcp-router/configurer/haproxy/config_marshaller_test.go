@@ -18,7 +18,7 @@ var _ = Describe("ConfigMarshaller", func() {
 			marshaller     haproxy.ConfigMarshaller
 			logger         lager.Logger
 			backendTlsCfg  config.BackendTLSConfig
-			frontendTlsCfg config.FrontendTLSConfig
+			frontendTlsCfg []config.FrontendTLSConfig
 		)
 
 		BeforeEach(func() {
@@ -29,9 +29,11 @@ var _ = Describe("ConfigMarshaller", func() {
 				Enabled:           false,
 				CACertificatePath: "/fake/path/to/ca.pem",
 			}
-			frontendTlsCfg = config.FrontendTLSConfig{
-				Enabled:        false,
-				CertificateDir: "/fake/path/to/certs/",
+			frontendTlsCfg = []config.FrontendTLSConfig{
+				{
+					Enabled:        false,
+					CertificateDir: "/fake/path/to/certs/",
+				},
 			}
 		})
 
@@ -383,7 +385,7 @@ backend backend_1025
 
 		Context("when frontend_tls is enabled", func() {
 			BeforeEach(func() {
-				frontendTlsCfg.Enabled = true
+				frontendTlsCfg[0].Enabled = true
 			})
 
 			It("and backend_tls is disabled", func() {

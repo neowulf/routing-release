@@ -12,7 +12,7 @@ import (
 
 //go:generate counterfeiter -o fakes/fake_config_marshaller.go . ConfigMarshaller
 type ConfigMarshaller interface {
-	Marshal(models.HAProxyConfig, config.BackendTLSConfig, config.FrontendTLSConfig) string
+	Marshal(models.HAProxyConfig, config.BackendTLSConfig, []config.FrontendTLSConfig) string
 }
 
 type configMarshaller struct {
@@ -23,7 +23,7 @@ func NewConfigMarshaller(l lager.Logger) ConfigMarshaller {
 	return configMarshaller{logger: l}
 }
 
-func (cm configMarshaller) Marshal(conf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) string {
+func (cm configMarshaller) Marshal(conf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) string {
 	var output strings.Builder
 	sortedPorts := sortedHAProxyInboundPorts(conf)
 	for inboundPortIdx := range sortedPorts {
@@ -35,7 +35,7 @@ func (cm configMarshaller) Marshal(conf models.HAProxyConfig, backendTlsCfg conf
 	return output.String()
 }
 
-func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort, frontend models.HAProxyFrontend, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) string {
+func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort, frontend models.HAProxyFrontend, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) string {
 	var (
 		frontendStanza strings.Builder
 		backendStanzas strings.Builder
@@ -45,7 +45,10 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 	frontendStanza.WriteString(fmt.Sprintf("\n  bind :%d", port))
 
 	if frontend.TerminateFrontendTLS() {
-		frontendStanza.WriteString(fmt.Sprintf(" ssl crt %s", frontendTlsCfg.CertificateDir))
+		frontendStanza.WriteString(" ssl")
+		for _, entry := range frontendTlsCfg {
+			frontendStanza.WriteString(fmt.Sprintf(" crt %s", entry.CertificateDir))
+		}
 
 		alpns := frontend.CollectALPNs()
 		if len(alpns) > 0 {
