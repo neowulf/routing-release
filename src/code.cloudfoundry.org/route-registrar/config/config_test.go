@@ -230,7 +230,7 @@ var _ = Describe("Config", func() {
 						RegistrationInterval: registrationInterval1String,
 						URIs:                 []string{"my-other-app.my-domain.com"},
 						ServerCertDomainSAN:  "my.internal.cert",
-						TerminateFrontendTLS: false,
+						TerminateFrontendTLS: true,
 						ALPNs:                []string{"alpn1", "alpn2"},
 						Options: &config.Options{
 							LoadBalancingAlgorithm: config.LeastConns,
@@ -324,7 +324,7 @@ var _ = Describe("Config", func() {
 						RegistrationInterval: registrationInterval1,
 						URIs:                 configSchema.Routes[1].URIs,
 						ServerCertDomainSAN:  "my.internal.cert",
-						TerminateFrontendTLS: false,
+						TerminateFrontendTLS: true,
 						ALPNs:                []string{"alpn1", "alpn2"},
 						Options: &config.Options{
 							LoadBalancingAlgorithm: config.LeastConns,
