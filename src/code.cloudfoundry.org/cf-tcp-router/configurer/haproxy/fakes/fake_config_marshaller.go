@@ -10,12 +10,12 @@ import (
 )
 
 type FakeConfigMarshaller struct {
-	MarshalStub        func(models.HAProxyConfig, config.BackendTLSConfig, config.FrontendTLSConfig) string
+	MarshalStub        func(models.HAProxyConfig, config.BackendTLSConfig, []config.FrontendTLSConfig) string
 	marshalMutex       sync.RWMutex
 	marshalArgsForCall []struct {
 		arg1 models.HAProxyConfig
 		arg2 config.BackendTLSConfig
-		arg3 config.FrontendTLSConfig
+		arg3 []config.FrontendTLSConfig
 	}
 	marshalReturns struct {
 		result1 string
@@ -27,17 +27,22 @@ type FakeConfigMarshaller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigMarshaller) Marshal(arg1 models.HAProxyConfig, arg2 config.BackendTLSConfig, arg3 config.FrontendTLSConfig) string {
+func (fake *FakeConfigMarshaller) Marshal(arg1 models.HAProxyConfig, arg2 config.BackendTLSConfig, arg3 []config.FrontendTLSConfig) string {
+	var arg3Copy []config.FrontendTLSConfig
+	if arg3 != nil {
+		arg3Copy = make([]config.FrontendTLSConfig, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.marshalMutex.Lock()
 	ret, specificReturn := fake.marshalReturnsOnCall[len(fake.marshalArgsForCall)]
 	fake.marshalArgsForCall = append(fake.marshalArgsForCall, struct {
 		arg1 models.HAProxyConfig
 		arg2 config.BackendTLSConfig
-		arg3 config.FrontendTLSConfig
-	}{arg1, arg2, arg3})
+		arg3 []config.FrontendTLSConfig
+	}{arg1, arg2, arg3Copy})
 	stub := fake.MarshalStub
 	fakeReturns := fake.marshalReturns
-	fake.recordInvocation("Marshal", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Marshal", []interface{}{arg1, arg2, arg3Copy})
 	fake.marshalMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -54,13 +59,13 @@ func (fake *FakeConfigMarshaller) MarshalCallCount() int {
 	return len(fake.marshalArgsForCall)
 }
 
-func (fake *FakeConfigMarshaller) MarshalCalls(stub func(models.HAProxyConfig, config.BackendTLSConfig, config.FrontendTLSConfig) string) {
+func (fake *FakeConfigMarshaller) MarshalCalls(stub func(models.HAProxyConfig, config.BackendTLSConfig, []config.FrontendTLSConfig) string) {
 	fake.marshalMutex.Lock()
 	defer fake.marshalMutex.Unlock()
 	fake.MarshalStub = stub
 }
 
-func (fake *FakeConfigMarshaller) MarshalArgsForCall(i int) (models.HAProxyConfig, config.BackendTLSConfig, config.FrontendTLSConfig) {
+func (fake *FakeConfigMarshaller) MarshalArgsForCall(i int) (models.HAProxyConfig, config.BackendTLSConfig, []config.FrontendTLSConfig) {
 	fake.marshalMutex.RLock()
 	defer fake.marshalMutex.RUnlock()
 	argsForCall := fake.marshalArgsForCall[i]
@@ -93,8 +98,6 @@ func (fake *FakeConfigMarshaller) MarshalReturnsOnCall(i int, result1 string) {
 func (fake *FakeConfigMarshaller) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.marshalMutex.RLock()
-	defer fake.marshalMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

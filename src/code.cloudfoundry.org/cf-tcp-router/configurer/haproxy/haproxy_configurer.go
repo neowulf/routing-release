@@ -26,12 +26,12 @@ type Configurer struct {
 	configFilePath     string
 	configFileLock     *sync.Mutex
 	backendTlsCfg      config.BackendTLSConfig
-	frontendTlsCfg     config.FrontendTLSConfig
+	frontendTlsCfg     []config.FrontendTLSConfig
 	monitor            monitor.Monitor
 	scriptRunner       ScriptRunner
 }
 
-func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg config.FrontendTLSConfig) (*Configurer, error) {
+func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller, baseConfigFilePath string, configFilePath string, monitor monitor.Monitor, scriptRunner ScriptRunner, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) (*Configurer, error) {
 	if !utils.FileExists(baseConfigFilePath) {
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterConfigFileNotFound, baseConfigFilePath)
 	}
@@ -48,8 +48,10 @@ func NewHaProxyConfigurer(logger lager.Logger, configMarshaller ConfigMarshaller
 		return nil, fmt.Errorf("%s: [%s]", ErrRouterCAFileNotFound, backendTlsCfg.ClientCertAndKeyPath)
 	}
 
-	if frontendTlsCfg.CertificateDir != "" && !utils.DirExists(frontendTlsCfg.CertificateDir) {
-		return nil, fmt.Errorf("%s: [%s]", ErrRouterCertDirNotFound, frontendTlsCfg.CertificateDir)
+	for _, entry := range frontendTlsCfg {
+		if entry.CertificateDir != "" && !utils.DirExists(entry.CertificateDir) {
+			return nil, fmt.Errorf("%s: [%s]", ErrRouterCertDirNotFound, entry.CertificateDir)
+		}
 	}
 
 	return &Configurer{
