@@ -104,7 +104,7 @@ properties:
         type (optional, string, for all routes): Defaults to http, can specify http, sni, or tcp.
         uris (required, array, for http routes): When Gorouter receives a request that matches one of these URIs,
           it will forward them to the IP of the host on which route_registrar runs, and either port or tls_port.
-        sni_port (required, integer, for sni rotues): When sni type provided, this is the downstream port to route to
+        sni_port (required, integer, for sni routes): When sni type provided, this is the downstream port to route to
         port (required, integer, for all routes): Either `port` or `tls_port` are required; if both are provided, Gorouter will prefer tls_port.
           Requests for associated URIs will be forwarded unencypted by the router to this port.
           The IP is determined automatically from the host on which route-registrar is run.
@@ -128,6 +128,8 @@ properties:
         external_port (required, string, for tcp routes): Port that the TCP router will listen on.
         server_cert_domain_name_modifier (optional, string, for sni routes): a regex replace to help with complicated hostnames.
         options (optional, object, for http routes): Custom per-route options
+        terminate_frontend_tls (optional, boolean): When true, the router will terminate TLS before forwarding requests to the backend. Default: false
+        alpns (optional, array): Application Layer Protocol Negotiation strings.
 
       health_check object
         name (required, string): Human-readable reference for the healthcheck
@@ -145,8 +147,6 @@ properties:
 
       options object
         loadbalancing (optional, string): Load balancing algorithm for routing incoming requests to the backend: 'round-robin' or 'least-connection'. In cases where this option is not specified, the algorithm defined in gorouter spec is applied.
-        terminate_frontend_tls (optional, boolean): When true, the router will terminate TLS before forwarding requests to the backend. Default: false
-        alpns (optional, array): Application Layer Protocol Negotiation strings.
 
     example: |
       - name: my-service
@@ -163,12 +163,12 @@ properties:
           script_path: /path/to/script
           timeout: 5s
         route_service_url: https://my-oauth-proxy-route-service.example.com
+        terminate_frontend_tls: true
+        alpns:
+          - h2
+          - http/1.1
         options:
           loadbalancing: least-connection
-          terminate_frontend_tls: true
-          alpns:
-            - h2
-            - http/1.1
       - name: my-tls-endpoint
         tls_port: 12346
         server_cert_domain_san: "my-tls-endpoint.internal.com"
