@@ -8,8 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -83,6 +86,23 @@ func (c *Config) FrontendTLSJobBasePath() string {
 	return "/var/vcap/jobs/tcp_router/config/keys/tcp-router/frontend"
 }
 
+func resolveGroupID(primary, fallback string) (int, error) {
+	group, err := user.LookupGroup(primary)
+	if err != nil {
+		group, err = user.LookupGroup(fallback)
+		if err != nil {
+			return -1, err
+		}
+	}
+
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return -1, err
+	}
+
+	return gid, nil
+}
+
 func (c *Config) initConfigFromFile(path string) error {
 	var e error
 
@@ -102,6 +122,17 @@ func (c *Config) initConfigFromFile(path string) error {
 
 	if c.DrainWaitDuration < 0 {
 		c.DrainWaitDuration = DrainWaitDefault
+	}
+
+	owner, err := user.Lookup("root")
+	if err != nil {
+		return err
+	}
+	uid, _ := strconv.Atoi(owner.Uid)
+
+	gid, _ := resolveGroupID("vcap", "root")
+	if err != nil {
+		return err
 	}
 
 	if len(c.FrontendTLSJob) > 0 {
@@ -137,9 +168,13 @@ func (c *Config) initConfigFromFile(path string) error {
 			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
 			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
 
-			os.WriteFile(certFilePath, []byte(certChain), 0644)
+			if err := writeFile(certFilePath, []byte(certChain), 0640, uid, gid); err != nil {
+				return err
+			}
 
-			os.WriteFile(keyFilePath, []byte(privateKey), 0600)
+			if err := writeFile(keyFilePath, []byte(privateKey), 0600, uid, gid); err != nil {
+				return err
+			}
 
 			outputs = append(outputs, FrontendTLSConfig{
 				Enabled:        true,
@@ -239,4 +274,47 @@ func certHasSAN(cert *x509.Certificate) bool {
 	hasDNSEntries := len(cert.DNSNames) > 0
 
 	return hasSANExtension || hasDNSEntries
+}
+
+// writeFile writes data to the given path with the specified file mode and ownership.
+// If the filesystem is read-only or the operation is not permitted,
+// it skips the write, chown, or chmod operations without returning an error.
+// this is required as initConfigFromFile is triggered during prestart and
+// also from tcp_router_ctl as a vcap user so we can safely skip file creation
+func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := os.Chown(path, uid, gid); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := os.Chmod(path, mode); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
+
+func isReadOnlyFS(err error) bool {
+	var errno syscall.Errno
+	return errors.As(err, &errno) && errno == syscall.EROFS
+}
+
+func isPermissionDenied(err error) bool {
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return errno == syscall.EPERM || errno == syscall.EACCES
+	}
+	return errors.Is(err, os.ErrPermission)
 }
