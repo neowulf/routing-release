@@ -78,8 +78,6 @@ func (fake *FakeHaproxyClient) GetStatsReturnsOnCall(i int, result1 haproxy_clie
 func (fake *FakeHaproxyClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getStatsMutex.RLock()
-	defer fake.getStatsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

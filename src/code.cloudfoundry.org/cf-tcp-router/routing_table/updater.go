@@ -245,12 +245,14 @@ func (u *updater) toRoutingTableEntry(logger lager.Logger, routeMapping apimodel
 	}
 
 	backendServerInfo := models.BackendServerInfo{
-		Address:         routeMapping.HostIP,
-		Port:            routeMapping.HostPort,
-		TLSPort:         routeMapping.HostTLSPort,
-		InstanceID:      routeMapping.InstanceId,
-		ModificationTag: routeMapping.ModificationTag,
-		TTL:             ttl,
+		Address:              routeMapping.HostIP,
+		Port:                 routeMapping.HostPort,
+		TLSPort:              routeMapping.HostTLSPort,
+		InstanceID:           routeMapping.InstanceId,
+		ModificationTag:      routeMapping.ModificationTag,
+		TTL:                  ttl,
+		TerminateFrontendTLS: routeMapping.TerminateFrontendTLS,
+		ALPNs:                routeMapping.ALPNs,
 	}
 	return routingKey, backendServerInfo
 }

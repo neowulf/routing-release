@@ -39,7 +39,7 @@ Initial Setup
 mkdir -p ~/workspace
 cd ~/workspace
 
-# clone ci
+# clone ci - used by the routing-release's docker container's test scripts
 git clone https://github.com/cloudfoundry/wg-app-platform-runtime-ci.git
 
 # clone repo
@@ -68,4 +68,4 @@ When inside docker container:
 - `/repo/scripts/docker/lint.bash`: This will run required linters.
 
 > [!IMPORTANT]
-> If you are about to submit a PR, please make sure to run `./scripts/test-in-docker.bash` for MySQL and Postgres to ensure everything is tested in clean container. If you are developing, you can create create a docker container first, then the only required script to run before testing your specific component is `build-binaries.bash`.
+> If you are about to submit a PR, please make sure to run `./scripts/test-in-docker.bash` for MySQL and Postgres to ensure everything is tested in clean container. If you are developing, you can create a docker container first, then the only required script to run before testing your specific component is `build-binaries.bash`.

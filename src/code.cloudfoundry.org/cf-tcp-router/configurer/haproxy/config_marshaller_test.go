@@ -14,10 +14,11 @@ import (
 var _ = Describe("ConfigMarshaller", func() {
 	Describe("Marshal", func() {
 		var (
-			haproxyConf   models.HAProxyConfig
-			marshaller    haproxy.ConfigMarshaller
-			logger        lager.Logger
-			backendTlsCfg config.BackendTLSConfig
+			haproxyConf    models.HAProxyConfig
+			marshaller     haproxy.ConfigMarshaller
+			logger         lager.Logger
+			backendTlsCfg  config.BackendTLSConfig
+			frontendTlsCfg []config.FrontendTLSConfig
 		)
 
 		BeforeEach(func() {
@@ -27,6 +28,12 @@ var _ = Describe("ConfigMarshaller", func() {
 			backendTlsCfg = config.BackendTLSConfig{
 				Enabled:           false,
 				CACertificatePath: "/fake/path/to/ca.pem",
+			}
+			frontendTlsCfg = []config.FrontendTLSConfig{
+				{
+					Enabled:        false,
+					CertificateDir: "/fake/path/to/certs/",
+				},
 			}
 		})
 
@@ -38,7 +45,7 @@ var _ = Describe("ConfigMarshaller", func() {
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -59,7 +66,7 @@ backend backend_80
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -82,7 +89,7 @@ backend backend_80_external-host.example.com
 						"external-host.example.com": {{Address: "sni-host.internal", Port: 9090}},
 					},
 				}
-				actual := marshaller.Marshal(haproxyConf, backendTlsCfg)
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 				Expect(actual).To(Equal(`
 frontend frontend_80
   mode tcp
@@ -116,7 +123,7 @@ backend backend_80_external-host.example.com
 						"": {{Address: "host-80.internal", Port: 8080}},
 					},
 				}
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_70
   mode tcp
   bind :70
@@ -157,7 +164,7 @@ backend backend_90
 					},
 				}
 
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -193,7 +200,7 @@ backend backend_80_host-99.example.com
 						},
 					},
 				}
-				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+				Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -221,7 +228,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -245,7 +252,7 @@ backend backend_80
 								},
 							},
 						}
-						Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+						Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -268,7 +275,7 @@ backend backend_80
 							},
 						},
 					}
-					marshaller.Marshal(haproxyConf, backendTlsCfg)
+					marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 					Expect(logger).To(gbytes.Say("route-missing-tls-information"))
 				})
 				It("uses the non-tls backend port", func() {
@@ -279,7 +286,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -300,7 +307,7 @@ backend backend_80
 							},
 						},
 					}
-					marshaller.Marshal(haproxyConf, backendTlsCfg)
+					marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
 					Expect(logger).NotTo(gbytes.Say("route-missing-tls-information"))
 				})
 				It("uses the non-tls backend port", func() {
@@ -311,7 +318,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg)).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -328,7 +335,7 @@ backend backend_80
 
 		Context("when backend_tls is disabled", func() {
 			Context("when a TLSPort is provided", func() {
-				It("loggs an error", func() {
+				It("logs an error", func() {
 					haproxyConf = models.HAProxyConfig{
 						80: {
 							"": {
@@ -336,7 +343,7 @@ backend backend_80
 							},
 						},
 					}
-					Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false})).To(Equal(`
+					Expect(marshaller.Marshal(haproxyConf, config.BackendTLSConfig{Enabled: false}, frontendTlsCfg)).To(Equal(`
 frontend frontend_80
   mode tcp
   bind :80
@@ -347,6 +354,142 @@ backend backend_80
 `))
 					Expect(logger).To(gbytes.Say("Backend TLS Port was set, but backend_tls has not been enabled for tcp-router"))
 				})
+			})
+		})
+
+		Context("when frontend_tls is disabled", func() {
+			It("and backend_tls is disabled", func() {
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"": {
+							{Address: "88.0.0.36", Port: 8888, InstanceID: "host-88-instance-id"},
+							{Address: "88.0.0.37", Port: 8889, InstanceID: "host-89-instance-id"},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025
+  default_backend backend_1025
+
+backend backend_1025
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+  server server_88.0.0.37_8889 88.0.0.37:8889
+`))
+			})
+		})
+
+		Context("when frontend_tls is enabled", func() {
+			BeforeEach(func() {
+				frontendTlsCfg[0].Enabled = true
+			})
+
+			It("and backend_tls is disabled", func() {
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.38", Port: 8890, TLSPort: 0, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889
+  server server_88.0.0.38_8890 88.0.0.38:8890
+`))
+			})
+
+			It("and backend_tls is enabled", func() {
+				backendTlsCfg.Enabled = true
+
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", TLSPort: 8888, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", TLSPort: 8889, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true},
+							{Address: "88.0.0.38", TLSPort: 8890, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888 ssl verify required verifyhost host-88-instance-id ca-file /fake/path/to/ca.pem
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
+  server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required verifyhost host-90-instance-id ca-file /fake/path/to/ca.pem
+`))
+			})
+
+			It("and backend_tls is disabled and ALPNs are defined", func() {
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", Port: 8888, TLSPort: 0, InstanceID: "host-88-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn2"},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", Port: 8889, TLSPort: 0, InstanceID: "host-89-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn1,alpn3"},
+							{Address: "88.0.0.38", Port: 8890, TLSPort: 0, InstanceID: "host-90-instance-id", TerminateFrontendTLS: true, ALPNs: "alpn4,alpn1"},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/ alpn alpn1,alpn2,alpn3,alpn4
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889
+  server server_88.0.0.38_8890 88.0.0.38:8890
+`))
 			})
 		})
 	})

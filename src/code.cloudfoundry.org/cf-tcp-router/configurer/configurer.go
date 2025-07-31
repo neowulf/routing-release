@@ -19,7 +19,7 @@ type RouterConfigurer interface {
 	Configure(routingTable models.RoutingTable, forceHealthCheckToFail bool) error
 }
 
-func NewConfigurer(logger lager.Logger, tcpLoadBalancer string, tcpLoadBalancerBaseCfg string, tcpLoadBalancerCfg string, monitor monitor.Monitor, scriptRunner haproxy.ScriptRunner, backendTlsCfg config.BackendTLSConfig) RouterConfigurer {
+func NewConfigurer(logger lager.Logger, tcpLoadBalancer string, tcpLoadBalancerBaseCfg string, tcpLoadBalancerCfg string, monitor monitor.Monitor, scriptRunner haproxy.ScriptRunner, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) RouterConfigurer {
 	switch tcpLoadBalancer {
 	case HaProxyConfigurer:
 		routerHostInfo, err := haproxy.NewHaProxyConfigurer(
@@ -30,6 +30,7 @@ func NewConfigurer(logger lager.Logger, tcpLoadBalancer string, tcpLoadBalancerB
 			monitor,
 			scriptRunner,
 			backendTlsCfg,
+			frontendTlsCfg,
 		)
 
 		if err != nil {

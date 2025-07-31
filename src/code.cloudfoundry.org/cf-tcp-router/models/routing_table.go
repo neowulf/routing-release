@@ -17,19 +17,23 @@ type RoutingKey struct {
 }
 
 type BackendServerInfo struct {
-	Address         string
-	Port            uint16
-	TLSPort         int
-	InstanceID      string
-	ModificationTag routing_api_models.ModificationTag
-	TTL             int
+	Address              string
+	Port                 uint16
+	TLSPort              int
+	InstanceID           string
+	ModificationTag      routing_api_models.ModificationTag
+	TTL                  int
+	TerminateFrontendTLS bool
+	ALPNs                string
 }
 
 type BackendServerKey struct {
-	Address    string
-	Port       uint16
-	TLSPort    int
-	InstanceID string
+	Address              string
+	Port                 uint16
+	TLSPort              int
+	InstanceID           string
+	TerminateFrontendTLS bool
+	ALPNs                string
 }
 
 type BackendServerDetails struct {
@@ -52,7 +56,7 @@ func NewRoutingTableEntry(backends []BackendServerInfo) RoutingTableEntry {
 		Backends: make(map[BackendServerKey]BackendServerDetails),
 	}
 	for _, backend := range backends {
-		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID}
+		backendServerKey := BackendServerKey{Address: backend.Address, Port: backend.Port, TLSPort: backend.TLSPort, InstanceID: backend.InstanceID, TerminateFrontendTLS: backend.TerminateFrontendTLS, ALPNs: backend.ALPNs}
 		backendServerDetails := BackendServerDetails{ModificationTag: backend.ModificationTag, TTL: backend.TTL, UpdatedTime: time.Now()}
 
 		routingTableEntry.Backends[backendServerKey] = backendServerDetails
@@ -85,7 +89,13 @@ func (e RoutingTableEntry) PruneBackends(defaultTTL int, logger lager.Logger) {
 // Used to determine whether the details have changed such that the routing configuration needs to be updated.
 // e.g max number of connection
 func (d BackendServerDetails) DifferentFrom(other BackendServerDetails) bool {
-	return d.UpdateSucceededBy(other) && false
+	// BackendServerDetails only contains TTL, ModificationTag, and UpdatedTime.
+	// Changes to these fields don't affect routing configuration.
+	// Routing configuration changes are detected by changes to BackendServerKey.
+	// TTL changes don't affect routing configuration, only expiration timing.
+	// ModificationTag changes don't affect routing configuration, only versioning.
+	// UpdatedTime changes don't affect routing configuration.
+	return false
 }
 
 func (d BackendServerDetails) UpdateSucceededBy(other BackendServerDetails) bool {
@@ -118,10 +128,10 @@ func (table RoutingTable) PruneEntries(defaultTTL int) {
 }
 
 func (table RoutingTable) serverKeyDetailsFromInfo(info BackendServerInfo) (BackendServerKey, BackendServerDetails) {
-	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
+	return BackendServerKey{Address: info.Address, Port: info.Port, TLSPort: info.TLSPort, InstanceID: info.InstanceID, TerminateFrontendTLS: info.TerminateFrontendTLS, ALPNs: info.ALPNs}, BackendServerDetails{ModificationTag: info.ModificationTag, TTL: info.TTL, UpdatedTime: time.Now()}
 }
 
-// Returns true if routing configuration should be modified, false if it should not.
+// Set returns true if routing configuration should be modified, false if it should not.
 func (table RoutingTable) Set(key RoutingKey, newEntry RoutingTableEntry) bool {
 	existingEntry, ok := table.Entries[key]
 	if ok && reflect.DeepEqual(existingEntry, newEntry) {
@@ -131,7 +141,7 @@ func (table RoutingTable) Set(key RoutingKey, newEntry RoutingTableEntry) bool {
 	return true
 }
 
-// Returns true if routing configuration should be modified, false if it should not.
+// UpsertBackendServerKey returns true if routing configuration should be modified, false if it should not.
 func (table RoutingTable) UpsertBackendServerKey(key RoutingKey, info BackendServerInfo) bool {
 	logger := table.logger.Session("upsert-backend", lager.Data{"key": key, "info": info})
 

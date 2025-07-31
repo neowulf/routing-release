@@ -12,7 +12,7 @@ import (
 
 //go:generate counterfeiter -o fakes/fake_config_marshaller.go . ConfigMarshaller
 type ConfigMarshaller interface {
-	Marshal(models.HAProxyConfig, config.BackendTLSConfig) string
+	Marshal(models.HAProxyConfig, config.BackendTLSConfig, []config.FrontendTLSConfig) string
 }
 
 type configMarshaller struct {
@@ -23,19 +23,19 @@ func NewConfigMarshaller(l lager.Logger) ConfigMarshaller {
 	return configMarshaller{logger: l}
 }
 
-func (cm configMarshaller) Marshal(conf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig) string {
+func (cm configMarshaller) Marshal(conf models.HAProxyConfig, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) string {
 	var output strings.Builder
 	sortedPorts := sortedHAProxyInboundPorts(conf)
 	for inboundPortIdx := range sortedPorts {
 		port := sortedPorts[inboundPortIdx]
 		frontend := conf[port]
 
-		output.WriteString(cm.marshalHAProxyFrontend(port, frontend, backendTlsCfg))
+		output.WriteString(cm.marshalHAProxyFrontend(port, frontend, backendTlsCfg, frontendTlsCfg))
 	}
 	return output.String()
 }
 
-func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort, frontend models.HAProxyFrontend, backendTlsCfg config.BackendTLSConfig) string {
+func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort, frontend models.HAProxyFrontend, backendTlsCfg config.BackendTLSConfig, frontendTlsCfg []config.FrontendTLSConfig) string {
 	var (
 		frontendStanza strings.Builder
 		backendStanzas strings.Builder
@@ -43,6 +43,18 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 	frontendStanza.WriteString(fmt.Sprintf("\nfrontend frontend_%d", port))
 	frontendStanza.WriteString("\n  mode tcp")
 	frontendStanza.WriteString(fmt.Sprintf("\n  bind :%d", port))
+
+	if frontend.TerminateFrontendTLS() {
+		frontendStanza.WriteString(" ssl")
+		for _, entry := range frontendTlsCfg {
+			frontendStanza.WriteString(fmt.Sprintf(" crt %s", entry.CertificateDir))
+		}
+
+		alpns := frontend.CollectALPNs()
+		if len(alpns) > 0 {
+			frontendStanza.WriteString(fmt.Sprintf(" alpn %s", strings.Join(alpns, ",")))
+		}
+	}
 
 	if frontend.ContainsSNIRoutes() {
 		frontendStanza.WriteString("\n  tcp-request inspect-delay 5s")
@@ -60,7 +72,12 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 
 		} else { // SNI routes use named backends
 			backendCfgName = fmt.Sprintf("backend_%d_%s", port, hostname)
-			frontendStanza.WriteString(fmt.Sprintf("\n  use_backend %s if { req.ssl_sni %s }", backendCfgName, hostname))
+
+			sniConditional := "req.ssl_sni"
+			if frontend.TerminateFrontendTLS() {
+				sniConditional = "ssl_fc_sni"
+			}
+			frontendStanza.WriteString(fmt.Sprintf("\n  use_backend %s if { %s %s }", backendCfgName, sniConditional, hostname))
 		}
 
 		backend := frontend[hostname]

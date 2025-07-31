@@ -146,12 +146,6 @@ func (fake *FakeMonitor) StopWatchingCalls(stub func()) {
 func (fake *FakeMonitor) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.runMutex.RLock()
-	defer fake.runMutex.RUnlock()
-	fake.startWatchingMutex.RLock()
-	defer fake.startWatchingMutex.RUnlock()
-	fake.stopWatchingMutex.RLock()
-	defer fake.stopWatchingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
