@@ -236,7 +236,7 @@ frontend frontend_80
 
 backend backend_80
   mode tcp
-  server server_host-88.internal_8443 host-88.internal:8443 ssl verify required verifyhost host-88-instance-id ca-file /fake/path/to/ca.pem
+  server server_host-88.internal_8443 host-88.internal:8443 ssl verify required ca-file /fake/path/to/ca.pem verifyhost host-88-instance-id
 `))
 				})
 
@@ -260,7 +260,7 @@ frontend frontend_80
 
 backend backend_80
   mode tcp
-  server server_host-88.internal_8443 host-88.internal:8443 ssl verify required verifyhost host-88-instance-id ca-file /fake/path/to/ca.pem crt /fake/path/to/client_cert_and_key.pem
+  server server_host-88.internal_8443 host-88.internal:8443 ssl verify required ca-file /fake/path/to/ca.pem crt /fake/path/to/client_cert_and_key.pem verifyhost host-88-instance-id
 `))
 
 					})
@@ -422,7 +422,7 @@ backend backend_1025_rmq2.sys.tas.foobar.com
 `))
 			})
 
-			It("and backend_tls is enabled", func() {
+			It("and backend_tls is enabled with instance ids", func() {
 				backendTlsCfg.Enabled = true
 
 				haproxyConf = models.HAProxyConfig{
@@ -449,12 +449,48 @@ frontend frontend_1025
 
 backend backend_1025_rmq1.sys.tas.foobar.com
   mode tcp
-  server server_88.0.0.36_8888 88.0.0.36:8888 ssl verify required verifyhost host-88-instance-id ca-file /fake/path/to/ca.pem
+  server server_88.0.0.36_8888 88.0.0.36:8888 ssl verify required ca-file /fake/path/to/ca.pem verifyhost host-88-instance-id
 
 backend backend_1025_rmq2.sys.tas.foobar.com
   mode tcp
-  server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required verifyhost host-89-instance-id ca-file /fake/path/to/ca.pem
-  server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required verifyhost host-90-instance-id ca-file /fake/path/to/ca.pem
+  server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required ca-file /fake/path/to/ca.pem verifyhost host-89-instance-id
+  server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required ca-file /fake/path/to/ca.pem verifyhost host-90-instance-id
+`))
+			})
+
+			It("and backend_tls is enabled without instance ids", func() {
+				backendTlsCfg.Enabled = true
+
+				haproxyConf = models.HAProxyConfig{
+					1025: {
+						"rmq1.sys.tas.foobar.com": {
+							{Address: "88.0.0.36", TLSPort: 8888, TerminateFrontendTLS: true},
+						},
+						"rmq2.sys.tas.foobar.com": {
+							{Address: "88.0.0.37", TLSPort: 8889, TerminateFrontendTLS: true},
+							{Address: "88.0.0.38", TLSPort: 8890, TerminateFrontendTLS: true},
+						},
+					},
+				}
+				actual := marshaller.Marshal(haproxyConf, backendTlsCfg, frontendTlsCfg)
+
+				Expect(actual).To(Equal(`
+frontend frontend_1025
+  mode tcp
+  bind :1025 ssl crt /fake/path/to/certs/
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req.ssl_hello_type gt 0 }
+  use_backend backend_1025_rmq1.sys.tas.foobar.com if { ssl_fc_sni rmq1.sys.tas.foobar.com }
+  use_backend backend_1025_rmq2.sys.tas.foobar.com if { ssl_fc_sni rmq2.sys.tas.foobar.com }
+
+backend backend_1025_rmq1.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.36_8888 88.0.0.36:8888 ssl verify required ca-file /fake/path/to/ca.pem
+
+backend backend_1025_rmq2.sys.tas.foobar.com
+  mode tcp
+  server server_88.0.0.37_8889 88.0.0.37:8889 ssl verify required ca-file /fake/path/to/ca.pem
+  server server_88.0.0.38_8890 88.0.0.38:8890 ssl verify required ca-file /fake/path/to/ca.pem
 `))
 			})
 

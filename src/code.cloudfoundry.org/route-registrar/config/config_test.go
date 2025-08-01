@@ -95,6 +95,7 @@ var _ = Describe("Config", func() {
 					URIs:                 []string{"my-other-app.my-domain.com"},
 					ServerCertDomainSAN:  "my.internal.cert",
 					TerminateFrontendTLS: true,
+					EnableBackendTLS:     true,
 					ALPNs:                []string{"h2", "http/1.1"},
 					Options: &config.Options{
 						LoadBalancingAlgorithm: config.LeastConns,

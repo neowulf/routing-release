@@ -50,6 +50,7 @@ The route-registrar expects a configuration json file like the one below:
         "timeout": "HEALTH_CHECK_TIMEOUT"
       },
       "terminate_frontend_tls": true,
+      "enable_backend_tls": false,
       "alpns": [
         "alpn1",
         "alpn2"
@@ -83,7 +84,10 @@ The route-registrar expects a configuration json file like the one below:
   - `route_service_url` is optional. When provided, Gorouter will proxy
     requests received for the `uris` above to this address.
   - `health_check` is optional and explained in more detail below.
-  - `terminate_frontend_tls` is optional. When true, the router will terminate TLS before forwarding requests to the backend. Default: false
+  - `terminate_frontend_tls` is optional. When true, the router will terminate 
+    TLS before forwarding the requests to the backend servers. Default: false
+  - `enable_backend_tls` is optional. When true, the router will initiate a 
+    TLS connection to the backend servers. Default: false 
   - `alpns` is optional and is an array of Application Layer Protocol Negotiation strings.
   - `options` is optional and explained in more detail below.
 

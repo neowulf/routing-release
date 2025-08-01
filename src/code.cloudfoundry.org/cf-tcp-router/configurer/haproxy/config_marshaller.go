@@ -82,7 +82,7 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 
 		backend := frontend[hostname]
 
-		haProxyBackendString := cm.marshalHAProxyBackend(backendCfgName, backend, backendTlsCfg)
+		haProxyBackendString := cm.marshalHAProxyBackend(backendCfgName, backend, backendTlsCfg, frontend.TerminateFrontendTLS())
 		backendStanzas.WriteString(haProxyBackendString)
 	}
 
@@ -92,7 +92,7 @@ func (cm configMarshaller) marshalHAProxyFrontend(port models.HAProxyInboundPort
 }
 
 // This might result in malformed lines since we always write the opening stanza, but conditionally write others...
-func (cm configMarshaller) marshalHAProxyBackend(backendName string, backend models.HAProxyBackend, backendTlsCfg config.BackendTLSConfig) string {
+func (cm configMarshaller) marshalHAProxyBackend(backendName string, backend models.HAProxyBackend, backendTlsCfg config.BackendTLSConfig, enableFrontendTLS bool) string {
 	var output strings.Builder
 
 	output.WriteString(fmt.Sprintf("\nbackend %s", backendName))
@@ -106,10 +106,14 @@ func (cm configMarshaller) marshalHAProxyBackend(backendName string, backend mod
 		}
 
 		if server.TLSPort > 0 {
-			output.WriteString(fmt.Sprintf("\n  server server_%s_%d %s:%d ssl verify required verifyhost %s ca-file %s", server.Address, server.TLSPort, server.Address, server.TLSPort, server.InstanceID, backendTlsCfg.CACertificatePath))
+			output.WriteString(fmt.Sprintf("\n  server server_%s_%d %s:%d ssl verify required ca-file %s", server.Address, server.TLSPort, server.Address, server.TLSPort, backendTlsCfg.CACertificatePath))
 
-			if backendTlsCfg.ClientCertAndKeyPath != "" {
+			if !enableFrontendTLS && backendTlsCfg.ClientCertAndKeyPath != "" {
 				output.WriteString(fmt.Sprintf(" crt %s", backendTlsCfg.ClientCertAndKeyPath))
+			}
+
+			if server.InstanceID != "" {
+				output.WriteString(fmt.Sprintf(" verifyhost %s", server.InstanceID))
 			}
 		} else {
 			if server.TLSPort == 0 && backendTlsCfg.Enabled {

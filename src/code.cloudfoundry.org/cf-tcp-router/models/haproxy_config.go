@@ -43,7 +43,9 @@ func NewHAProxyConfig(routingTable RoutingTable, logger lager.Logger) HAProxyCon
 				continue
 			}
 
-			if (backendKey.TLSPort > 0) && (backendKey.InstanceID == "") {
+			// if the route is terminating in the frontend, we are initiating a new tls connection to the backend. In which case, the instanceId may be ignored
+			if (backendKey.TLSPort > 0) &&
+				(!backendKey.TerminateFrontendTLS && backendKey.InstanceID == "") {
 				logError(logger, "backend_configuration.instance_id", routingKey, "unset")
 				continue
 			}

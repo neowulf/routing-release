@@ -282,10 +282,10 @@ func certHasSAN(cert *x509.Certificate) bool {
 
 // writeFile writes data to the given path with the specified file mode and ownership.
 //
-// If the filesystem is read-only or the operation is not permitted,
-// it skips the write, chown, or chmod operations without returning an error.
-// this is required as initConfigFromFile is triggered during prestart and
-// also from tcp_router_ctl as a vcap user so we can safely skip file creation
+// this function is accessed from:
+//  1. prestart errand which has the necessary privs and is responsible for creating the files
+//  2. tcp_router_ctl which doesn't have the necessary privs but also invokes this function
+//     and so can be safely skipped
 func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		if isReadOnlyFS(err) || isPermissionDenied(err) {
