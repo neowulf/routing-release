@@ -16,7 +16,7 @@ var _ = Describe("Configurer", func() {
 
 	Describe("NewConfigurer", func() {
 		var backendTlsCfg config.BackendTLSConfig
-		var frontendTlsCfg config.FrontendTLSConfig
+		var frontendTlsCfg []config.FrontendTLSConfig
 		BeforeEach(func() {
 			caFile, _ := tlshelpers.GenerateCa()
 			_, clientCertFile, _, _ := tlshelpers.GenerateCaAndMutualTlsCerts()
@@ -70,21 +70,21 @@ var _ = Describe("Configurer", func() {
 			Context("when FrontendTLS is enabled and empty CertDir are passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, []config.FrontendTLSConfig{config.FrontendTLSConfig{Enabled: true}})
 					}).ShouldNot(Panic())
 				})
 			})
 			Context("when FrontendTLS is enabled and invalid CertDir is passed", func() {
 				It("should panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "foobar"})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, []config.FrontendTLSConfig{config.FrontendTLSConfig{Enabled: true, CertificateDir: "foobar"}})
 					}).Should(Panic())
 				})
 			})
 			Context("when FrontendTLS is enabled and valid CertDir is passed", func() {
 				It("should not panic", func() {
 					Expect(func() {
-						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, config.FrontendTLSConfig{Enabled: true, CertificateDir: "fixtures"})
+						configurer.NewConfigurer(logger, configurer.HaProxyConfigurer, "haproxy/fixtures/haproxy.cfg.template", "haproxy/fixtures/haproxy.cfg", nil, nil, config.BackendTLSConfig{}, []config.FrontendTLSConfig{config.FrontendTLSConfig{Enabled: true, CertificateDir: "fixtures"}})
 					}).Should(Panic())
 				})
 			})

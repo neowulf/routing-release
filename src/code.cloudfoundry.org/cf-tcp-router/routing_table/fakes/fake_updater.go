@@ -270,16 +270,6 @@ func (fake *FakeUpdater) SyncingReturnsOnCall(i int, result1 bool) {
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.drainMutex.RLock()
-	defer fake.drainMutex.RUnlock()
-	fake.handleEventMutex.RLock()
-	defer fake.handleEventMutex.RUnlock()
-	fake.pruneStaleRoutesMutex.RLock()
-	defer fake.pruneStaleRoutesMutex.RUnlock()
-	fake.syncMutex.RLock()
-	defer fake.syncMutex.RUnlock()
-	fake.syncingMutex.RLock()
-	defer fake.syncingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
