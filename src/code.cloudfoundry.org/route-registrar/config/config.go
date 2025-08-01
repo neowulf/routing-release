@@ -68,6 +68,7 @@ type RouteSchema struct {
 	ServerCertDomainSAN  string             `json:"server_cert_domain_san,omitempty" yaml:"server_cert_domain_san,omitempty"`
 	SniRoutableSan       string             `json:"sni_routable_san,omitempty" yaml:"sni_routable_san,omitempty"`
 	TerminateFrontendTLS bool               `json:"terminate_frontend_tls,omitempty" yaml:"terminate_frontend_tls,omitempty"`
+	EnableBackendTLS     bool               `json:"enable_backend_tls,omitempty" yaml:"enable_backend_tls,omitempty"`
 	ALPNs                []string           `json:"alpns,omitempty" yaml:"alpns,omitempty"`
 	Options              *Options           `json:"options,omitempty" yaml:"options,omitempty"`
 }
@@ -154,6 +155,7 @@ type Route struct {
 	ServerCertDomainSAN  string
 	TerminateFrontendTLS bool
 	ALPNs                []string
+	EnableBackendTLS     bool
 	Options              *Options
 }
 
@@ -359,6 +361,7 @@ func RouteFromSchema(r RouteSchema, index int, host string) (*Route, error) {
 		HealthCheck:          healthCheck,
 		TerminateFrontendTLS: r.TerminateFrontendTLS,
 		ALPNs:                r.ALPNs,
+		EnableBackendTLS:     r.EnableBackendTLS,
 		Options:              r.Options,
 	}
 

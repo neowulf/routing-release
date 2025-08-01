@@ -8,7 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -37,7 +41,7 @@ type FrontendTLSConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5.1-crt
 	// https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#3.12-load
-	CertificateDir string `yaml:"cert_dir"`
+	CertificateDir string `yaml:"cert_path"`
 }
 
 type BackendTLSConfig struct {
@@ -46,15 +50,22 @@ type BackendTLSConfig struct {
 	ClientCertAndKeyPath string `yaml:"client_cert_and_key_path"`
 }
 
+type FrontendTLSJob struct {
+	Name       string `yaml:"name"`
+	CertChain  string `yaml:"cert_chain"`
+	PrivateKey string `yaml:"private_key"`
+}
+
 type Config struct {
-	OAuth                        OAuthConfig       `yaml:"oauth"`
-	RoutingAPI                   RoutingAPIConfig  `yaml:"routing_api"`
-	HaProxyPidFile               string            `yaml:"haproxy_pid_file"`
-	IsolationSegments            []string          `yaml:"isolation_segments"`
-	ReservedSystemComponentPorts []uint16          `yaml:"reserved_system_component_ports"`
-	DrainWaitDuration            time.Duration     `yaml:"drain_wait"`
-	BackendTLS                   BackendTLSConfig  `yaml:"backend_tls"`
-	FrontendTLS                  FrontendTLSConfig `yaml:"frontend_tls"`
+	OAuth                        OAuthConfig         `yaml:"oauth"`
+	RoutingAPI                   RoutingAPIConfig    `yaml:"routing_api"`
+	HaProxyPidFile               string              `yaml:"haproxy_pid_file"`
+	IsolationSegments            []string            `yaml:"isolation_segments"`
+	ReservedSystemComponentPorts []uint16            `yaml:"reserved_system_component_ports"`
+	DrainWaitDuration            time.Duration       `yaml:"drain_wait"`
+	BackendTLS                   BackendTLSConfig    `yaml:"backend_tls"`
+	FrontendTLS                  []FrontendTLSConfig `yaml:"frontend_tls_pem"`
+	FrontendTLSJob               []FrontendTLSJob    `yaml:"frontend_tls"`
 }
 
 const DrainWaitDefault = 20 * time.Second
@@ -68,17 +79,38 @@ func New(path string) (*Config, error) {
 	return c, nil
 }
 
-func (c *Config) initConfigFromFile(path string) error {
-	var e error
+func (c *Config) FrontendTLSJobBasePath() string {
+	if bp := os.Getenv("FRONTEND_TLS_BASE_PATH"); bp != "" {
+		return bp
+	}
+	return "/var/vcap/jobs/tcp_router/config/certs/tcp-router/frontend"
+}
 
-	b, e := os.ReadFile(path)
-	if e != nil {
-		return e
+func resolveGroupID(primary, fallback string) (int, error) {
+	group, err := user.LookupGroup(primary)
+	if err != nil {
+		group, err = user.LookupGroup(fallback)
+		if err != nil {
+			return -1, err
+		}
 	}
 
-	e = yaml.Unmarshal(b, &c)
-	if e != nil {
-		return e
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return -1, err
+	}
+
+	return gid, nil
+}
+
+func (c *Config) initConfigFromFile(path string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(b, &c); err != nil {
+		return err
 	}
 
 	if c.HaProxyPidFile == "" {
@@ -87,6 +119,76 @@ func (c *Config) initConfigFromFile(path string) error {
 
 	if c.DrainWaitDuration < 0 {
 		c.DrainWaitDuration = DrainWaitDefault
+	}
+
+	owner, err := user.Lookup("root")
+	if err != nil {
+		return err
+	}
+
+	uid, err := strconv.Atoi(owner.Uid)
+	if err != nil {
+		return err
+	}
+
+	gid, err := resolveGroupID("vcap", "root")
+	if err != nil {
+		return err
+	}
+
+	if len(c.FrontendTLSJob) > 0 {
+		var outputs []FrontendTLSConfig
+		basePath := c.FrontendTLSJobBasePath()
+		for i, cert := range c.FrontendTLSJob {
+
+			name := strings.TrimSpace(cert.Name)
+			certChain := strings.TrimSpace(cert.CertChain)
+			privateKey := strings.TrimSpace(cert.PrivateKey)
+
+			if name == "" || certChain == "" || privateKey == "" {
+				return fmt.Errorf("frontend_tls[%d] must include name, cert_chain, and private_key", i)
+			}
+
+			block, _ := pem.Decode([]byte(certChain))
+			if block == nil {
+				return errors.New("failed to parse PEM block")
+			}
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return err
+			}
+
+			hasSAN := certHasSAN(cert)
+			if !hasSAN {
+				return fmt.Errorf("frontend_tls[%d].cert_chain must include a subjectAltName extension", i)
+			}
+
+			dirPath := filepath.Join(basePath, name)
+			if err := os.MkdirAll(dirPath, 0755); err != nil {
+				if !(isReadOnlyFS(err) || isPermissionDenied(err)) {
+					return err
+				}
+			}
+
+			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
+			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
+
+			if err := writeFile(certFilePath, []byte(certChain), 0640, uid, gid); err != nil {
+				return err
+			}
+
+			if err := writeFile(keyFilePath, []byte(privateKey), 0600, uid, gid); err != nil {
+				return err
+			}
+
+			outputs = append(outputs, FrontendTLSConfig{
+				Enabled:        true,
+				CertificateDir: dirPath,
+			})
+		}
+
+		c.FrontendTLS = outputs
+
 	}
 
 	if c.BackendTLS.Enabled {
@@ -158,25 +260,63 @@ func (c *Config) initConfigFromFile(path string) error {
 			}
 		}
 	} else {
-		c.BackendTLS.CACertificatePath = ""
-		c.BackendTLS.ClientCertAndKeyPath = ""
-	}
-
-	if c.FrontendTLS.Enabled {
-		certPath := c.FrontendTLS.CertificateDir
-		if certPath == "" {
-			return errors.New("frontend_tls.cert_path is required")
-		}
-
-		info, err := os.Stat(certPath)
-		if err != nil {
-			return fmt.Errorf("Error checking directory %q: %s", certPath, err)
-		} else if !info.IsDir() {
-			return fmt.Errorf("Path %q exists but is not a directory", certPath)
-		}
-	} else {
-		c.FrontendTLS.CertificateDir = ""
+		c.BackendTLS = BackendTLSConfig{}
 	}
 
 	return nil
+}
+
+func certHasSAN(cert *x509.Certificate) bool {
+	hasSANExtension := false
+	for _, ext := range cert.Extensions {
+		if ext.Id.String() == "2.5.29.17" {
+			hasSANExtension = true
+			break
+		}
+	}
+
+	hasDNSEntries := len(cert.DNSNames) > 0
+
+	return hasSANExtension || hasDNSEntries
+}
+
+// writeFile writes data to the given path with the specified file mode and ownership.
+//
+// If the filesystem is read-only or the operation is not permitted,
+// it skips the write, chown, or chmod operations without returning an error.
+// this is required as initConfigFromFile is triggered during prestart and
+// also from tcp_router_ctl as a vcap user so we can safely skip file creation
+func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := os.Chown(path, uid, gid); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := os.Chmod(path, mode); err != nil {
+		if isReadOnlyFS(err) || isPermissionDenied(err) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
+
+func isReadOnlyFS(err error) bool {
+	return errors.Is(err, syscall.EROFS)
+}
+
+func isPermissionDenied(err error) bool {
+	return errors.Is(err, syscall.EPERM) ||
+		errors.Is(err, syscall.EACCES) ||
+		errors.Is(err, os.ErrPermission)
 }
