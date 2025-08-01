@@ -22,6 +22,7 @@
       "registration_interval": "10s",
       "server_cert_domain_san": "my.internal.cert",
       "terminate_frontend_tls": true,
+      "enable_backend_tls": true,
       "alpns": ["h2", "http/1.1"]
     },
     {

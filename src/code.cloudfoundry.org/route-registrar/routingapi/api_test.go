@@ -83,6 +83,55 @@ var _ = Describe("Routing API", func() {
 		Expect(tcpRouteMapping.TerminateFrontendTLS).To(BeFalse())
 	})
 
+	Context("Sets HostTlsPort", func() {
+		var route config.Route
+
+		BeforeEach(func() {
+			route = config.Route{
+				ExternalPort:         &externalPort,
+				Port:                 &port,
+				TerminateFrontendTLS: true,
+				EnableBackendTLS:     true,
+				ServerCertDomainSAN:  "sniHostname",
+			}
+		})
+
+		It("when TerminateFrontendTLS, EnableBackendTLS are enabled and ServerCertDomainSAN is present", func() {
+			tcpRouteMapping, err := api.makeTcpRouteMapping(route)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tcpRouteMapping.HostPort).To(BeNumerically(">", 0))
+			Expect(tcpRouteMapping.HostTLSPort).To(BeNumerically("==", tcpRouteMapping.HostPort))
+		})
+
+		It("when TerminateFrontendTLS, EnableBackendTLS are enabled and ServerCertDomainSAN is not present", func() {
+			route.ServerCertDomainSAN = ""
+			tcpRouteMapping, err := api.makeTcpRouteMapping(route)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tcpRouteMapping.HostTLSPort).To(Equal(-1))
+			Expect(tcpRouteMapping.HostTLSPort).NotTo(Equal(tcpRouteMapping.HostPort))
+		})
+
+		It("when TerminateFrontendTLS is disabled, EnableBackendTLS is enabled and ServerCertDomainSAN is present", func() {
+			route.TerminateFrontendTLS = false
+			tcpRouteMapping, err := api.makeTcpRouteMapping(route)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tcpRouteMapping.HostTLSPort).To(Equal(-1))
+			Expect(tcpRouteMapping.HostTLSPort).NotTo(Equal(tcpRouteMapping.HostPort))
+		})
+
+		It("when TerminateFrontendTLS is enabled, EnableBackendTLS is disabled and ServerCertDomainSAN is present", func() {
+			route.EnableBackendTLS = false
+			tcpRouteMapping, err := api.makeTcpRouteMapping(route)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tcpRouteMapping.HostTLSPort).To(Equal(-1))
+			Expect(tcpRouteMapping.HostTLSPort).NotTo(Equal(tcpRouteMapping.HostPort))
+		})
+	})
+
 	It("Sets ALPNs if ALPNs are present.", func() {
 		tcpRouteMapping, err := api.makeTcpRouteMapping(config.Route{
 			Port:         &port,

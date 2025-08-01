@@ -115,11 +115,11 @@ var _ = Describe("HAProxyConfig", func() {
 					})
 				})
 
-				Context("because backend TLS port is supplied but instance_id is not", func() {
-					It("logs an error", func() {
+				Context("because instance_id is not supplied", func() {
+					It("logs an error when backend TLS port is supplied and TerminateFrontendTLS is false", func() {
 						routingTable.Entries[RoutingKey{Port: 81}] = RoutingTableEntry{
 							Backends: map[BackendServerKey]BackendServerDetails{
-								BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443}: {},
+								BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, TerminateFrontendTLS: false}: {},
 							},
 						}
 
@@ -130,23 +130,62 @@ var _ = Describe("HAProxyConfig", func() {
 			})
 		})
 
-		Context("when TLS port and instance_id are provided", func() {
-			It("creates a valid HAProxyConfig", func() {
-				instanceId := "foo"
-				routingTable.Entries[RoutingKey{Port: 80}] = RoutingTableEntry{
-					Backends: map[BackendServerKey]BackendServerDetails{
-						BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId}: {},
-					},
-				}
-
-				Expect(NewHAProxyConfig(routingTable, logger)).To(Equal(HAProxyConfig{
-					80: {
-						"": {
-							{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId},
+		Context("when TLS port is provided", func() {
+			Context("and instance_id are provided", func() {
+				It("and TerminateFrontendTLS is false - create a valid HAProxyConfig", func() {
+					instanceId := "foo"
+					routingTable.Entries[RoutingKey{Port: 80}] = RoutingTableEntry{
+						Backends: map[BackendServerKey]BackendServerDetails{
+							BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: false}: {},
 						},
-					},
-				}))
+					}
+
+					Expect(NewHAProxyConfig(routingTable, logger)).To(Equal(HAProxyConfig{
+						80: {
+							"": {
+								{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: false},
+							},
+						},
+					}))
+				})
+
+				It("and TerminateFrontendTLS is true - create a valid HAProxyConfig", func() {
+					instanceId := "foo"
+					routingTable.Entries[RoutingKey{Port: 80}] = RoutingTableEntry{
+						Backends: map[BackendServerKey]BackendServerDetails{
+							BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: true}: {},
+						},
+					}
+
+					Expect(NewHAProxyConfig(routingTable, logger)).To(Equal(HAProxyConfig{
+						80: {
+							"": {
+								{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: true},
+							},
+						},
+					}))
+				})
 			})
+
+			Context("and instance_id is not supplied", func() {
+				It("and TerminateFrontendTLS is true - create a valid HAProxyConfig", func() {
+					instanceId := ""
+					routingTable.Entries[RoutingKey{Port: 80}] = RoutingTableEntry{
+						Backends: map[BackendServerKey]BackendServerDetails{
+							BackendServerKey{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: true}: {},
+						},
+					}
+
+					Expect(NewHAProxyConfig(routingTable, logger)).To(Equal(HAProxyConfig{
+						80: {
+							"": {
+								{Address: "valid-host-1.example.com", Port: 1111, TLSPort: 1443, InstanceID: instanceId, TerminateFrontendTLS: true},
+							},
+						},
+					}))
+				})
+			})
+
 			Context("and backend port 0", func() {
 				It("creates a valid HAProxyConfig", func() {
 					instanceId := "foo"
@@ -314,6 +353,5 @@ var _ = Describe("HAProxyConfig", func() {
 				Expect(frontends.CollectALPNs()).To(Equal([]string{"alpn1", "alpn2", "alpn3"}))
 			})
 		})
-
 	})
 })

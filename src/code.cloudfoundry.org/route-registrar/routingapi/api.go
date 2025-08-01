@@ -83,19 +83,18 @@ func (r *RoutingAPI) makeTcpRouteMapping(route config.Route) (models.TcpRouteMap
 	r.logger.Info("Creating mapping", lager.Data{})
 
 	hostTlsPort := -1
-	instanceId := ""
+	routePort := *route.Port
 	if route.TerminateFrontendTLS && route.EnableBackendTLS && route.ServerCertDomainSAN != "" {
-		hostTlsPort = int(*route.Port)
-		instanceId = route.ServerCertDomainSAN
+		hostTlsPort = int(routePort)
 	}
 
 	return models.NewTcpRouteMapping(
 		routerGroupGUID,
 		*route.ExternalPort,
 		route.Host,
-		*route.Port,
+		routePort,
 		hostTlsPort,
-		instanceId,
+		"",
 		nilIfEmpty(&route.ServerCertDomainSAN),
 		calculateTTL(route.RegistrationInterval, r.routingAPIMaxTTL),
 		models.ModificationTag{},
