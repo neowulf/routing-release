@@ -164,7 +164,7 @@ func (c *Config) initConfigFromFile(path string) error {
 			}
 
 			dirPath := filepath.Join(basePath, name)
-			if err := os.MkdirAll(dirPath, 0755); err != nil {
+			if err := os.MkdirAll(dirPath, 0750); err != nil {
 				if !(isReadOnlyFS(err) || isPermissionDenied(err)) {
 					return err
 				}
@@ -173,11 +173,11 @@ func (c *Config) initConfigFromFile(path string) error {
 			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
 			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
 
-			if err := writeFile(certFilePath, []byte(certChain), 0640, uid, gid); err != nil {
+			if err := writeFile(certFilePath, []byte(certChain), 0750, uid, gid); err != nil {
 				return err
 			}
 
-			if err := writeFile(keyFilePath, []byte(privateKey), 0600, uid, gid); err != nil {
+			if err := writeFile(keyFilePath, []byte(privateKey), 0750, uid, gid); err != nil {
 				return err
 			}
 
@@ -287,7 +287,7 @@ func certHasSAN(cert *x509.Certificate) bool {
 //  2. tcp_router_ctl which doesn't have the necessary privs but also invokes this function
 //     and so can be safely skipped
 func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, mode); err != nil {
 		if isReadOnlyFS(err) || isPermissionDenied(err) {
 			return nil
 		}
@@ -295,13 +295,6 @@ func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
 	}
 
 	if err := os.Chown(path, uid, gid); err != nil {
-		if isReadOnlyFS(err) || isPermissionDenied(err) {
-			return nil
-		}
-		return err
-	}
-
-	if err := os.Chmod(path, mode); err != nil {
 		if isReadOnlyFS(err) || isPermissionDenied(err) {
 			return nil
 		}
