@@ -1,4 +1,4 @@
 [submodule "src/code.cloudfoundry.org/routing-api"]
 	path = src/code.cloudfoundry.org/routing-api
-	url = https://github.com/neowulf/routing-api
-	branch = siva/sni_routing-pr
+	url = https://github.com/cloudfoundry/routing-api
+	branch = main
