@@ -93,7 +93,7 @@ var _ = Describe("Config", Serial, func() {
 					ClientCertAndKeyPath: certAndKeyFile,
 				},
 			}
-			cfg, err := config.New("fixtures/valid_config.yml")
+			cfg, err := config.New("fixtures/valid_config.yml", false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*cfg).To(Equal(expectedCfg))
 		})
@@ -102,13 +102,13 @@ var _ = Describe("Config", Serial, func() {
 	Context("when given an invalid config", func() {
 		Context("non existing config", func() {
 			It("return error", func() {
-				_, err := config.New("fixtures/non_existing_config.yml")
+				_, err := config.New("fixtures/non_existing_config.yml", false)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 		Context("malformed YAML config", func() {
 			It("return error", func() {
-				_, err := config.New("fixtures/malformed_config.yml")
+				_, err := config.New("fixtures/malformed_config.yml", false)
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -118,7 +118,7 @@ var _ = Describe("Config", Serial, func() {
 		Context("is enabled", func() {
 			Context("when the CA path is not a valid CA", func() {
 				It("returns an error", func() {
-					_, err := config.New("fixtures/bad_ca_config.yml")
+					_, err := config.New("fixtures/bad_ca_config.yml", false)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Invalid PEM block found in file"))
 				})
@@ -126,7 +126,7 @@ var _ = Describe("Config", Serial, func() {
 
 			Context("when the Client Cert/key pair are not valid", func() {
 				It("returns an error", func() {
-					_, err := config.New("fixtures/bad_client_cert_config.yml")
+					_, err := config.New("fixtures/bad_client_cert_config.yml", false)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Invalid PEM CERTIFICATE found in file"))
 				})
@@ -134,7 +134,7 @@ var _ = Describe("Config", Serial, func() {
 
 			Context("when the Client Cert/key pair are mismatched", func() {
 				It("returns an error", func() {
-					_, err := config.New("fixtures/mismatched_client_cert_config.yml")
+					_, err := config.New("fixtures/mismatched_client_cert_config.yml", false)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Unable to validate backend TLS client cert + key in file"))
 					Expect(err.Error()).To(ContainSubstring("tls: private key does not match public key"))
@@ -143,7 +143,7 @@ var _ = Describe("Config", Serial, func() {
 
 			Context("when CA path is not specified", func() {
 				It("returns an error", func() {
-					_, err := config.New("fixtures/no_ca.yml")
+					_, err := config.New("fixtures/no_ca.yml", false)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Backend TLS was enabled but no CA certificates were specified"))
 				})
@@ -152,7 +152,7 @@ var _ = Describe("Config", Serial, func() {
 
 		Context("is disabled", func() {
 			It("does not set any of the backend_tls cert/ca values", func() {
-				cfg, err := config.New("fixtures/disabled_tls.yml")
+				cfg, err := config.New("fixtures/disabled_tls.yml", false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cfg.BackendTLS).To(Equal(config.BackendTLSConfig{
 					Enabled: false,
@@ -163,7 +163,7 @@ var _ = Describe("Config", Serial, func() {
 
 	Context("when haproxy pid file is missing", func() {
 		It("return error", func() {
-			_, err := config.New("fixtures/no_haproxy.yml")
+			_, err := config.New("fixtures/no_haproxy.yml", false)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -177,7 +177,7 @@ var _ = Describe("Config", Serial, func() {
 				},
 				HaProxyPidFile: "/path/to/pid/file",
 			}
-			cfg, err := config.New("fixtures/no_oauth.yml")
+			cfg, err := config.New("fixtures/no_oauth.yml", false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*cfg).To(Equal(expectedCfg))
 		})
@@ -199,7 +199,7 @@ var _ = Describe("Config", Serial, func() {
 				},
 				HaProxyPidFile: "/path/to/pid/file",
 			}
-			cfg, err := config.New("fixtures/missing_oauth_fields.yml")
+			cfg, err := config.New("fixtures/missing_oauth_fields.yml", false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*cfg).To(Equal(expectedCfg))
 		})
@@ -207,7 +207,7 @@ var _ = Describe("Config", Serial, func() {
 
 	Context("when drain_wait is a negative number", func() {
 		It("defaults to 20s", func() {
-			cfg, err := config.New("fixtures/negative_drain_wait.yml")
+			cfg, err := config.New("fixtures/negative_drain_wait.yml", false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.DrainWaitDuration).To(Equal(20 * time.Second))
 		})
@@ -231,7 +231,7 @@ var _ = Describe("Config", Serial, func() {
 
 		Context("with valid cert and key", func() {
 			BeforeEach(func() {
-				cfg, err = config.New("fixtures/valid_frontend_cert.yml")
+				cfg, err = config.New("fixtures/valid_frontend_cert.yml", true)
 			})
 
 			It("loads config without error", func() {
@@ -274,7 +274,7 @@ var _ = Describe("Config", Serial, func() {
 
 		Context("with invalid cert and key", func() {
 			BeforeEach(func() {
-				cfg, err = config.New("fixtures/valid_frontend_cert.yml")
+				cfg, err = config.New("fixtures/valid_frontend_cert.yml", true)
 			})
 
 			It("loads config without error", func() {
@@ -325,17 +325,17 @@ var _ = Describe("Config", Serial, func() {
 
 		Context("with invalid frontend_tls config", func() {
 			It("should fail if cert_chain is missing SAN information", func() {
-				_, err := config.New("fixtures/frontend_cert_without_san.yml")
+				_, err := config.New("fixtures/frontend_cert_without_san.yml", true)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("frontend_tls[0].cert_chain must include a subjectAltName extension"))
 			})
 			It("should fail if certs or keys are empty", func() {
-				_, err := config.New("fixtures/no_frontend_certs.yml")
+				_, err := config.New("fixtures/no_frontend_certs.yml", true)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("frontend_tls[0] must include name, cert_chain, and private_key"))
 			})
 			It("should fail if cert is invalid", func() {
-				_, err := config.New("fixtures/invalid_frontend_certs.yml")
+				_, err := config.New("fixtures/invalid_frontend_certs.yml", true)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("failed to parse PEM block"))
 			})

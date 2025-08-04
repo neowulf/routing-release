@@ -76,6 +76,12 @@ var configFile = flag.String(
 	"The Router configurer yml config.",
 )
 
+var enableCertCreation = flag.Bool(
+	"enable-cert-creation",
+	false,
+	"Parse certs and keys from tcp_router.yml and store them",
+)
+
 var routingGroupCheckExit = flag.Bool(
 	"routingGroupCheckExit",
 	false,
@@ -152,7 +158,7 @@ func main() {
 
 	initializeDropsonde(logger)
 
-	cfg, err := config.New(*configFile)
+	cfg, err := config.New(*configFile, *enableCertCreation)
 	if err != nil {
 		logger.Error("failed-to-unmarshal-config-file", err)
 		os.Exit(1)

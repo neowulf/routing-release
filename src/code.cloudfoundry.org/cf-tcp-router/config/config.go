@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -70,9 +69,9 @@ type Config struct {
 
 const DrainWaitDefault = 20 * time.Second
 
-func New(path string) (*Config, error) {
+func New(path string, enableCertCreation bool) (*Config, error) {
 	c := &Config{}
-	err := c.initConfigFromFile(path)
+	err := c.initConfigFromFile(path, enableCertCreation)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func resolveGroupID(primary, fallback string) (int, error) {
 	return gid, nil
 }
 
-func (c *Config) initConfigFromFile(path string) error {
+func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -121,22 +120,21 @@ func (c *Config) initConfigFromFile(path string) error {
 		c.DrainWaitDuration = DrainWaitDefault
 	}
 
-	owner, err := user.Lookup("root")
-	if err != nil {
-		return err
-	}
+	if enableCertCreation && len(c.FrontendTLSJob) > 0 {
+		owner, err := user.Lookup("root")
+		if err != nil {
+			return err
+		}
 
-	uid, err := strconv.Atoi(owner.Uid)
-	if err != nil {
-		return err
-	}
+		uid, err := strconv.Atoi(owner.Uid)
+		if err != nil {
+			return err
+		}
 
-	gid, err := resolveGroupID("vcap", "root")
-	if err != nil {
-		return err
-	}
-
-	if len(c.FrontendTLSJob) > 0 {
+		gid, err := resolveGroupID("vcap", "root")
+		if err != nil {
+			return err
+		}
 		var outputs []FrontendTLSConfig
 		basePath := c.FrontendTLSJobBasePath()
 		for i, cert := range c.FrontendTLSJob {
@@ -165,9 +163,7 @@ func (c *Config) initConfigFromFile(path string) error {
 
 			dirPath := filepath.Join(basePath, name)
 			if err := os.MkdirAll(dirPath, 0750); err != nil {
-				if !(isReadOnlyFS(err) || isPermissionDenied(err)) {
-					return err
-				}
+				return err
 			}
 
 			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
@@ -280,36 +276,14 @@ func certHasSAN(cert *x509.Certificate) bool {
 	return hasSANExtension || hasDNSEntries
 }
 
-// writeFile writes data to the given path with the specified file mode and ownership.
-//
-// this function is accessed from:
-//  1. prestart errand which has the necessary privs and is responsible for creating the files
-//  2. tcp_router_ctl which doesn't have the necessary privs but also invokes this function
-//     and so can be safely skipped
 func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
 	if err := os.WriteFile(path, data, mode); err != nil {
-		if isReadOnlyFS(err) || isPermissionDenied(err) {
-			return nil
-		}
 		return err
 	}
 
 	if err := os.Chown(path, uid, gid); err != nil {
-		if isReadOnlyFS(err) || isPermissionDenied(err) {
-			return nil
-		}
 		return err
 	}
 
 	return nil
-}
-
-func isReadOnlyFS(err error) bool {
-	return errors.Is(err, syscall.EROFS)
-}
-
-func isPermissionDenied(err error) bool {
-	return errors.Is(err, syscall.EPERM) ||
-		errors.Is(err, syscall.EACCES) ||
-		errors.Is(err, os.ErrPermission)
 }
