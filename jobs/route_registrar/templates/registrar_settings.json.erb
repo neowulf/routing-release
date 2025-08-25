@@ -91,7 +91,17 @@ TEXT
       route['uris'].map! { |uri| "#{spec.index}-#{uri}" }
     end
 
-    if route['type'] == 'sni'
+    if route['type'] == 'sni' and route['terminate_frontend_tls']
+      if route['sni_routable_san'] == nil or route['sni_routable_san'] == ''
+        raise "route_registrar.routes[#{index}].route.sni_routable_san must be provided when type is sni and terminate_frontend_tls is enabled"
+      end
+    end
+
+    if route['type'] == 'sni' and not route['terminate_frontend_tls']
+      if route['sni_routable_san'] != nil
+        raise "route_registrar.routes[#{index}].route.sni_routable_san cannot be provided when type is sni and terminate_frontend_tls is disabled"
+      end
+
       route['sni_routable_san'] = spec.address
 
       if route.key?('server_cert_domain_name_modifier')

@@ -84,6 +84,8 @@ The route-registrar expects a configuration json file like the one below:
   - `route_service_url` is optional. When provided, Gorouter will proxy
     requests received for the `uris` above to this address.
   - `health_check` is optional and explained in more detail below.
+  - `sni_routable_san` is the SAN used to route the request to the appropriate
+    backend. Required when `type` is `san` and `terminate_frontend_tls` is enabled.
   - `terminate_frontend_tls` is optional. When true, the router will terminate 
     TLS before forwarding the requests to the backend servers. Default: false
   - `enable_backend_tls` is optional. When true, the router will initiate a 

@@ -41,6 +41,18 @@ describe 'route_registrar' do
     }
   end
 
+  let(:sni_route) { {
+    "name" => "svc-name",
+    "registration_interval" => "20s",
+    "router_group" => "svc-router-group",
+    "external_port" => 1024,
+    "type" => "sni",
+    "sni_port" => 5671,
+    "sni_routable_san" => "svc-1.foobar.com",
+    "terminate_frontend_tls" => true,
+    "enable_backend_tls" => true
+  } }
+
   describe 'config/routing_api/certs/client.crt' do
     let(:template) { job.template('config/routing_api/certs/client.crt') }
     let(:links) do
@@ -492,7 +504,7 @@ describe 'route_registrar' do
       context 'when uaa.tls_port is provided in the link' do
         let(:uaa_link_properties) do
           {
-             'tls_port' => 9443, 
+             'tls_port' => 9443,
           }
         end
         it 'uses the link value' do
@@ -511,7 +523,7 @@ describe 'route_registrar' do
       context 'when uaa.token_endpoint is provided in the link' do
         let(:uaa_link_properties) do
           {
-            'token_endpoint' => 'link-uaa.service.cf.internal', 
+            'token_endpoint' => 'link-uaa.service.cf.internal',
           }
         end
         it 'uses the link value' do
@@ -678,6 +690,56 @@ describe 'route_registrar' do
         expect { template.render(merged_manifest_properties, consumes: links) }.to raise_error(
           RuntimeError, 'expected route_registrar.routes[0].route.server_cert_domain_san when tls_port is provided'
         )
+      end
+    end
+
+    describe 'when type is sni and frontend_tls is enabled and sni_routable_san is provided' do
+      before do
+        merged_manifest_properties['route_registrar']['routes'][0] = sni_route
+        merged_manifest_properties['nats'] = { 'fail_if_using_nats_without_tls' => false }
+      end
+
+      it 'should use the provided sni_routable_san' do
+        rendered_hash = JSON.parse(template.render(merged_manifest_properties, consumes: links))
+        expect(rendered_hash['routes'][0]).to eq({
+                                                   "name" => "svc-name",
+                                                   "registration_interval" => "20s",
+                                                   "router_group" => "svc-router-group",
+                                                   "external_port" => 1024,
+                                                   "type" => "sni",
+                                                   "sni_port" => 5671,
+                                                   "sni_routable_san" => "svc-1.foobar.com",
+                                                   "terminate_frontend_tls" => true,
+                                                   "enable_backend_tls" => true
+                                                 })
+      end
+    end
+
+    describe 'when type is sni and frontend_tls is disabled and sni_routable_san is provided' do
+      before do
+        merged_manifest_properties['route_registrar']['routes'][0] = sni_route
+        merged_manifest_properties['route_registrar']['routes'][0]['terminate_frontend_tls'] = false
+        merged_manifest_properties['nats'] = { 'fail_if_using_nats_without_tls' => false }
+      end
+
+      it 'raises an error for invalid sni_routable_san' do
+        expect { template.render(merged_manifest_properties, consumes: links) }.to raise_error(
+          RuntimeError, 'route_registrar.routes[0].route.sni_routable_san cannot be provided when type is sni and terminate_frontend_tls is disabled'
+       )
+      end
+    end
+
+    describe 'when type is sni and frontend_tls is enabled and sni_routable_san is NOT provided' do
+      before do
+        merged_manifest_properties['route_registrar']['routes'][0] = sni_route
+        merged_manifest_properties['route_registrar']['routes'][0]['sni_routable_san'] = ''
+        merged_manifest_properties['nats'] = { 'fail_if_using_nats_without_tls' => false }
+      end
+
+      it 'raises an error for invalid sni_routable_san' do
+        expect { template.render(merged_manifest_properties, consumes: links) }.to raise_error(
+         RuntimeError, 'route_registrar.routes[0].route.sni_routable_san must be provided when type is sni and terminate_frontend_tls is enabled'
+       )
       end
     end
 
