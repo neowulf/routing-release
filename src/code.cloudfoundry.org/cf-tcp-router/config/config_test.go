@@ -272,7 +272,7 @@ var _ = Describe("Config", Serial, func() {
 			})
 		})
 
-		Context("with invalid cert and key", func() {
+		Context("with invalid cert and key and enableCertCreation set to True", func() {
 			BeforeEach(func() {
 				cfg, err = config.New("fixtures/valid_frontend_cert.yml", true)
 			})
@@ -319,6 +319,41 @@ var _ = Describe("Config", Serial, func() {
 					keyInfo, err := os.Stat(keyPath)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(os.FileMode(0750)).To(Equal(keyInfo.Mode().Perm()))
+				}
+			})
+		})
+
+		Context("with invalid cert and key and enableCertCreation set to False", func() {
+			BeforeEach(func() {
+				cfg, err = config.New("fixtures/valid_frontend_cert.yml", false)
+			})
+
+			It("loads config without error", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("adds the certs and keys to the expected directories", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.FrontendTLS).To(HaveLen(2))
+
+				Expect(cfg.FrontendTLS[0]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "prod"),
+				}))
+
+				Expect(cfg.FrontendTLS[1]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "dev"),
+				}))
+			})
+
+			It("does not write the cert and key files", func() {
+				for _, name := range []string{"prod", "dev"} {
+					certPath := filepath.Join(tmpDir, name, name+".pem")
+					keyPath := filepath.Join(tmpDir, name, name+".pem.key")
+
+					Expect(certPath).ToNot(BeAnExistingFile())
+					Expect(keyPath).ToNot(BeAnExistingFile())
 				}
 			})
 		})

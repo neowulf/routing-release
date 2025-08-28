@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	path2 "path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -102,6 +103,10 @@ func resolveGroupID(primary, fallback string) (int, error) {
 	return gid, nil
 }
 
+// initConfigFromFile initializes the config and write the certs to the filesystem when enableCertCreation is true.
+//
+//	enableCertCreation is usually set to true in the tcp_router pre-start job which will create the certs on the filesystem.
+//	enableCertCreation is set to false which is the normal mode to run the tcp_router which will not modify the filesystem.
 func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -120,63 +125,43 @@ func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error 
 		c.DrainWaitDuration = DrainWaitDefault
 	}
 
-	if enableCertCreation && len(c.FrontendTLSJob) > 0 {
-		owner, err := user.Lookup("root")
-		if err != nil {
-			return err
-		}
-
-		uid, err := strconv.Atoi(owner.Uid)
-		if err != nil {
-			return err
-		}
-
-		gid, err := resolveGroupID("vcap", "root")
-		if err != nil {
-			return err
-		}
+	if len(c.FrontendTLSJob) > 0 {
 		var outputs []FrontendTLSConfig
-		basePath := c.FrontendTLSJobBasePath()
 		for i, cert := range c.FrontendTLSJob {
-
+			// validations
 			name := strings.TrimSpace(cert.Name)
-			certChain := strings.TrimSpace(cert.CertChain)
 			privateKey := strings.TrimSpace(cert.PrivateKey)
-
-			if name == "" || certChain == "" || privateKey == "" {
+			if name == "" || privateKey == "" {
 				return fmt.Errorf("frontend_tls[%d] must include name, cert_chain, and private_key", i)
 			}
 
-			block, _ := pem.Decode([]byte(certChain))
-			if block == nil {
-				return errors.New("failed to parse PEM block")
-			}
-			cert, err := x509.ParseCertificate(block.Bytes)
+			// check if san is present
+			hasSAN, err := certHasSAN(cert.CertChain)
 			if err != nil {
 				return err
 			}
-
-			hasSAN := certHasSAN(cert)
 			if !hasSAN {
 				return fmt.Errorf("frontend_tls[%d].cert_chain must include a subjectAltName extension", i)
 			}
 
-			dirPath := filepath.Join(basePath, name)
-			if err := os.MkdirAll(dirPath, 0750); err != nil {
-				return err
+			dirPath := filepath.Join(c.FrontendTLSJobBasePath(), name)
+
+			// write certs to the disk
+			if enableCertCreation {
+				if err := createDir(path2.Join(dirPath, "..")); err != nil {
+					return err
+				}
+
+				if err := createDir(dirPath); err != nil {
+					return err
+				}
+
+				if err := writeCertsToDisk(dirPath, name, cert, privateKey); err != nil {
+					return err
+				}
 			}
 
-			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
-			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
-
-			if err := writeFile(certFilePath, []byte(certChain), 0750, uid, gid); err != nil {
-				return err
-			}
-
-			if err := writeFile(keyFilePath, []byte(privateKey), 0750, uid, gid); err != nil {
-				return err
-			}
-
+			// update the configuration
 			outputs = append(outputs, FrontendTLSConfig{
 				Enabled:        true,
 				CertificateDir: dirPath,
@@ -262,7 +247,80 @@ func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error 
 	return nil
 }
 
-func certHasSAN(cert *x509.Certificate) bool {
+func createDir(dirPath string) error {
+	// ensure cert directory exists
+	if err := os.MkdirAll(dirPath, 0750); err != nil {
+		return err
+	}
+
+	targetUID, targetGID, err := getUIDGID()
+	if err != nil {
+		return err
+	}
+
+	// Change ownership
+	fmt.Printf("updating permissions for %s with %s:%s\n", dirPath, targetUID, targetGID)
+	err = os.Chown(dirPath, targetUID, targetGID)
+	if err != nil {
+		return fmt.Errorf("Error changing ownership: %v\n", err)
+	}
+
+	return nil
+}
+
+func writeCertsToDisk(dirPath string, name string, cert FrontendTLSJob, privateKey string) error {
+	uid, gid, err := getUIDGID()
+	if err != nil {
+		return err
+	}
+
+	certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
+	keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
+
+	if err := writeFile(certFilePath, []byte(cert.CertChain), 0750, uid, gid); err != nil {
+		return err
+	}
+
+	if err := writeFile(keyFilePath, []byte(privateKey), 0750, uid, gid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getUIDGID() (int, int, error) {
+	owner, err := user.Lookup("root")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	uid, err := strconv.Atoi(owner.Uid)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	gid, err := resolveGroupID("vcap", "root")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uid, gid, nil
+}
+
+func certHasSAN(certChain string) (bool, error) {
+	if certChain == "" {
+		return false, errors.New("cert chain is empty")
+	}
+
+	certChain = strings.TrimSpace(certChain)
+	block, _ := pem.Decode([]byte(certChain))
+	if block == nil {
+		return false, errors.New("failed to parse PEM block")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, err
+	}
+
 	hasSANExtension := false
 	for _, ext := range cert.Extensions {
 		if ext.Id.String() == "2.5.29.17" {
@@ -273,7 +331,7 @@ func certHasSAN(cert *x509.Certificate) bool {
 
 	hasDNSEntries := len(cert.DNSNames) > 0
 
-	return hasSANExtension || hasDNSEntries
+	return (hasSANExtension || hasDNSEntries), nil
 }
 
 func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
