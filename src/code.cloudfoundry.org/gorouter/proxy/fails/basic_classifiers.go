@@ -43,6 +43,7 @@ var RemoteFailedCertCheck = ClassifierFunc(func(err error) bool {
 		if opErr.Op == "remote error" {
 			if opErr.Err.Error() == "tls: bad certificate" ||
 				opErr.Err.Error() == "tls: unknown certificate authority" ||
+				opErr.Err.Error() == "tls: handshake failure" ||
 				opErr.Err.Error() == "tls: certificate required" {
 				return true
 			}
