@@ -54,7 +54,7 @@ TEXT
   end
 
   message_bus_servers = nil
-  if nats_user and nats_password
+  if nats_user && nats_password
     message_bus_servers = nats_machines.map do |host|
       {
         host: "#{host}:#{nats_port}",
@@ -91,13 +91,13 @@ TEXT
       route['uris'].map! { |uri| "#{spec.index}-#{uri}" }
     end
 
-    if route['type'] == 'sni' and route['terminate_frontend_tls']
-      if route['sni_routable_san'] == nil or route['sni_routable_san'] == ''
+    if route['type'] == 'sni' && route['terminate_frontend_tls']
+      if route['sni_routable_san'] == nil || route['sni_routable_san'] == ''
         raise "route_registrar.routes[#{index}].route.sni_routable_san must be provided when type is sni and terminate_frontend_tls is enabled"
       end
     end
 
-    if route['type'] == 'sni' and not route['terminate_frontend_tls']
+    if route['type'] == 'sni' && !route['terminate_frontend_tls']
       if route['sni_routable_san'] != nil
         raise "route_registrar.routes[#{index}].route.sni_routable_san cannot be provided when type is sni and terminate_frontend_tls is disabled"
       end
@@ -152,7 +152,7 @@ TEXT
     end
 
     link.if_p('routing_api.enabled_api_endpoints') do |endpoints|
-      if endpoints == 'both' or endpoints == 'mtls'
+      if endpoints == 'both' || endpoints == 'mtls'
         api_scheme = 'https'
         api_port = link.p('routing_api.tls_port', api_port)
       end
@@ -166,7 +166,7 @@ TEXT
 
   if_p('route_registrar.routing_api.api_url') do |prop|
     if_link('routing_api') do |link|
-      if link.p('routing_api.enabled_api_endpoints') == "mtls" and not prop.start_with?('https')
+      if link.p('routing_api.enabled_api_endpoints') == "mtls" && !prop.start_with?('https')
           raise 'expected route_registrar.routing_api.api_url to be https when routing_api.enabled_api_endpoints is mtls only'
       end
     end
