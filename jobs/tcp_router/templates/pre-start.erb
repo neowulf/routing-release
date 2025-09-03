@@ -1,5 +1,4 @@
 #!/bin/bash -e
 
-<% if spec.bootstrap == true %>
+# This pre-start script runs (1) config validation and (2) creates frontend certs on the VM (if any)
 /var/vcap/packages/tcp_router/bin/config-validator -config /var/vcap/jobs/tcp_router/config/tcp_router.yml -enable-cert-creation true
-<% end %>

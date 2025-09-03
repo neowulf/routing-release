@@ -102,6 +102,12 @@ func resolveGroupID(primary, fallback string) (int, error) {
 	return gid, nil
 }
 
+// initConfigFromFile initializes the config and write the certs to the filesystem when enableCertCreation is true.
+//
+// enableCertCreation is set to true during pre-start on all VMs. During pre-start initConfigFromFile is run
+// to (1) validate the config provided and (2) create the FrontendTLSJob certs on the filesystem if provided.
+//
+// enableCertCreation is set to false when bosh starts the tcp-router job.
 func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -121,70 +127,56 @@ func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error 
 	}
 
 	if enableCertCreation && len(c.FrontendTLSJob) > 0 {
-		owner, err := user.Lookup("root")
-		if err != nil {
-			return err
+		// remove existing directory which will clean out old certs if necessary
+		if err := os.RemoveAll(c.FrontendTLSJobBasePath()); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("directory could not be removed: %w", err)
 		}
 
-		uid, err := strconv.Atoi(owner.Uid)
-		if err != nil {
-			return err
+		if err := c.createDir(c.FrontendTLSJobBasePath()); err != nil {
+			return fmt.Errorf("could not create directory: %w", err)
+		}
+	}
+
+	for i, cert := range c.FrontendTLSJob {
+		// validations
+		name := strings.TrimSpace(cert.Name)
+		if name == "" {
+			return fmt.Errorf("frontend_tls[%d]: empty name", i)
 		}
 
-		gid, err := resolveGroupID("vcap", "root")
-		if err != nil {
-			return err
-		}
-		var outputs []FrontendTLSConfig
-		basePath := c.FrontendTLSJobBasePath()
-		for i, cert := range c.FrontendTLSJob {
-
-			name := strings.TrimSpace(cert.Name)
-			certChain := strings.TrimSpace(cert.CertChain)
-			privateKey := strings.TrimSpace(cert.PrivateKey)
-
-			if name == "" || certChain == "" || privateKey == "" {
-				return fmt.Errorf("frontend_tls[%d] must include name, cert_chain, and private_key", i)
-			}
-
-			block, _ := pem.Decode([]byte(certChain))
-			if block == nil {
-				return errors.New("failed to parse PEM block")
-			}
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return err
-			}
-
-			hasSAN := certHasSAN(cert)
-			if !hasSAN {
-				return fmt.Errorf("frontend_tls[%d].cert_chain must include a subjectAltName extension", i)
-			}
-
-			dirPath := filepath.Join(basePath, name)
-			if err := os.MkdirAll(dirPath, 0750); err != nil {
-				return err
-			}
-
-			certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
-			keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
-
-			if err := writeFile(certFilePath, []byte(certChain), 0750, uid, gid); err != nil {
-				return err
-			}
-
-			if err := writeFile(keyFilePath, []byte(privateKey), 0750, uid, gid); err != nil {
-				return err
-			}
-
-			outputs = append(outputs, FrontendTLSConfig{
-				Enabled:        true,
-				CertificateDir: dirPath,
-			})
+		certChain := strings.TrimSpace(cert.CertChain)
+		if certChain == "" {
+			return fmt.Errorf("frontend_tls[%d]: empty cert_chain", i)
 		}
 
-		c.FrontendTLS = outputs
+		privateKey := strings.TrimSpace(cert.PrivateKey)
+		if privateKey == "" {
+			return fmt.Errorf("frontend_tls[%d]: empty private_key", i)
+		}
 
+		// check if san is present and that the cert chain is valid
+		if err := certHasSAN(cert.CertChain); err != nil {
+			return fmt.Errorf("frontend_tls[%d]: %w", i, err)
+		}
+
+		dirPath := filepath.Join(c.FrontendTLSJobBasePath(), name)
+
+		// write certs to the disk
+		if enableCertCreation {
+			if err := c.createDir(dirPath); err != nil {
+				return fmt.Errorf("frontend_tls[%d]: %w", i, err)
+			}
+
+			if err := c.writeCertsToDisk(dirPath, name, cert, privateKey); err != nil {
+				return fmt.Errorf("frontend_tls[%d]: %w", i, err)
+			}
+		}
+
+		// update the config
+		c.FrontendTLS = append(c.FrontendTLS, FrontendTLSConfig{
+			Enabled:        true,
+			CertificateDir: dirPath,
+		})
 	}
 
 	if c.BackendTLS.Enabled {
@@ -262,18 +254,80 @@ func (c *Config) initConfigFromFile(path string, enableCertCreation bool) error 
 	return nil
 }
 
-func certHasSAN(cert *x509.Certificate) bool {
-	hasSANExtension := false
-	for _, ext := range cert.Extensions {
-		if ext.Id.String() == "2.5.29.17" {
-			hasSANExtension = true
-			break
-		}
+func (c *Config) createDir(dirPath string) error {
+	// ensure directory exists
+	if err := os.MkdirAll(dirPath, 0750); err != nil {
+		return err
 	}
 
-	hasDNSEntries := len(cert.DNSNames) > 0
+	targetUID, targetGID, err := c.getUIDGID()
+	if err != nil {
+		return err
+	}
 
-	return hasSANExtension || hasDNSEntries
+	// Change ownership
+	err = os.Chown(dirPath, targetUID, targetGID)
+	if err != nil {
+		return fmt.Errorf("Error changing ownership: %s", err)
+	}
+
+	return nil
+}
+
+func (c *Config) writeCertsToDisk(dirPath string, name string, cert FrontendTLSJob, privateKey string) error {
+	uid, gid, err := c.getUIDGID()
+	if err != nil {
+		return err
+	}
+
+	certFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem", name))
+	keyFilePath := filepath.Join(dirPath, fmt.Sprintf("%s.pem.key", name))
+
+	if err := writeFile(certFilePath, []byte(cert.CertChain), 0750, uid, gid); err != nil {
+		return err
+	}
+
+	if err := writeFile(keyFilePath, []byte(privateKey), 0750, uid, gid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Config) getUIDGID() (int, int, error) {
+	owner, err := user.Lookup("root")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	uid, err := strconv.Atoi(owner.Uid)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	gid, err := resolveGroupID("vcap", "root")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uid, gid, nil
+}
+
+func certHasSAN(certChain string) error {
+	block, _ := pem.Decode([]byte(certChain))
+	if block == nil {
+		return errors.New("failed to parse PEM block")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("could not parse certificate: %w", err)
+	}
+
+	if len(cert.DNSNames) > 0 {
+		return nil
+	}
+
+	return fmt.Errorf("cert_chain must include either a subjectAltName extension or DNSNames")
 }
 
 func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
@@ -281,9 +335,5 @@ func writeFile(path string, data []byte, mode os.FileMode, uid, gid int) error {
 		return err
 	}
 
-	if err := os.Chown(path, uid, gid); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Chown(path, uid, gid)
 }

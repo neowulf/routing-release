@@ -2,7 +2,9 @@ package config_test
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -221,7 +223,7 @@ var _ = Describe("Config", Serial, func() {
 		)
 
 		BeforeEach(func() {
-			tmpDir = GinkgoT().TempDir()
+			tmpDir = path.Join(GinkgoT().TempDir(), fmt.Sprintf("frontend-%d", rand.IntN(100)))
 			os.Setenv("FRONTEND_TLS_BASE_PATH", tmpDir)
 		})
 
@@ -229,7 +231,7 @@ var _ = Describe("Config", Serial, func() {
 			os.Unsetenv("FRONTEND_TLS_BASE_PATH")
 		})
 
-		Context("with valid cert and key", func() {
+		Context("with valid cert and key and enableCertCreation set to true", func() {
 			BeforeEach(func() {
 				cfg, err = config.New("fixtures/valid_frontend_cert.yml", true)
 			})
@@ -238,7 +240,7 @@ var _ = Describe("Config", Serial, func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("adds the certs and keys to the expected directories", func() {
+			It("updates the config with the expected directories", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cfg.FrontendTLS).To(HaveLen(2))
 
@@ -253,64 +255,17 @@ var _ = Describe("Config", Serial, func() {
 				}))
 			})
 
-			It("writes the correct cert and key files", func() {
+			It("writes the cert and key files", func() {
+				Expect(tmpDir).To(BeADirectory())
+
 				for i, name := range []string{"prod", "dev"} {
 					certPath := filepath.Join(tmpDir, name, name+".pem")
 					keyPath := filepath.Join(tmpDir, name, name+".pem.key")
 
-					Expect(certPath).To(BeAnExistingFile())
-					Expect(keyPath).To(BeAnExistingFile())
-
-					certData, certErr := os.ReadFile(certPath)
-					Expect(certErr).NotTo(HaveOccurred())
-					Expect(string(certData)).To(Equal(cfg.FrontendTLSJob[i].CertChain))
-
-					keyData, keyErr := os.ReadFile(keyPath)
-					Expect(keyErr).NotTo(HaveOccurred())
-					Expect(string(keyData)).To(Equal(cfg.FrontendTLSJob[i].PrivateKey))
-				}
-			})
-		})
-
-		Context("with invalid cert and key", func() {
-			BeforeEach(func() {
-				cfg, err = config.New("fixtures/valid_frontend_cert.yml", true)
-			})
-
-			It("loads config without error", func() {
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("adds the certs and keys to the expected directories", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(cfg.FrontendTLS).To(HaveLen(2))
-
-				Expect(cfg.FrontendTLS[0]).To(Equal(config.FrontendTLSConfig{
-					Enabled:        true,
-					CertificateDir: filepath.Join(tmpDir, "prod"),
-				}))
-
-				Expect(cfg.FrontendTLS[1]).To(Equal(config.FrontendTLSConfig{
-					Enabled:        true,
-					CertificateDir: filepath.Join(tmpDir, "dev"),
-				}))
-			})
-
-			It("writes the correct cert and key files with correct permissions", func() {
-				for i, name := range []string{"prod", "dev"} {
-					certPath := filepath.Join(tmpDir, name, name+".pem")
-					keyPath := filepath.Join(tmpDir, name, name+".pem.key")
+					Expect(path.Join(tmpDir, name)).To(BeADirectory())
 
 					Expect(certPath).To(BeAnExistingFile())
 					Expect(keyPath).To(BeAnExistingFile())
-
-					certData, certErr := os.ReadFile(certPath)
-					Expect(certErr).NotTo(HaveOccurred())
-					Expect(string(certData)).To(Equal(cfg.FrontendTLSJob[i].CertChain))
-
-					keyData, keyErr := os.ReadFile(keyPath)
-					Expect(keyErr).NotTo(HaveOccurred())
-					Expect(string(keyData)).To(Equal(cfg.FrontendTLSJob[i].PrivateKey))
 
 					certInfo, err := os.Stat(certPath)
 					Expect(err).NotTo(HaveOccurred())
@@ -319,28 +274,89 @@ var _ = Describe("Config", Serial, func() {
 					keyInfo, err := os.Stat(keyPath)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(os.FileMode(0750)).To(Equal(keyInfo.Mode().Perm()))
+
+					certData, certErr := os.ReadFile(certPath)
+					Expect(certErr).NotTo(HaveOccurred())
+					Expect(string(certData)).To(Equal(cfg.FrontendTLSJob[i].CertChain))
+
+					keyData, keyErr := os.ReadFile(keyPath)
+					Expect(keyErr).NotTo(HaveOccurred())
+					Expect(string(keyData)).To(Equal(cfg.FrontendTLSJob[i].PrivateKey))
+				}
+			})
+		})
+
+		Context("with valid cert (having san and dnsnames) and key and enableCertCreation set to false", func() {
+			BeforeEach(func() {
+				cfg, err = config.New("fixtures/valid_frontend_cert.yml", false)
+			})
+
+			It("loads config without error", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("updates the config with the expected directories", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.FrontendTLS).To(HaveLen(2))
+
+				Expect(cfg.FrontendTLS[0]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "prod"),
+				}))
+
+				Expect(cfg.FrontendTLS[1]).To(Equal(config.FrontendTLSConfig{
+					Enabled:        true,
+					CertificateDir: filepath.Join(tmpDir, "dev"),
+				}))
+			})
+
+			It("does not write the cert and key files as enableCertCreation is false", func() {
+				for _, name := range []string{"prod", "dev"} {
+					certPath := filepath.Join(tmpDir, name, name+".pem")
+					keyPath := filepath.Join(tmpDir, name, name+".pem.key")
+
+					Expect(certPath).ToNot(BeAnExistingFile())
+					Expect(keyPath).ToNot(BeAnExistingFile())
 				}
 			})
 		})
 
 		Context("with invalid frontend_tls config", func() {
-			It("should fail if cert_chain is missing SAN information", func() {
-				_, err := config.New("fixtures/frontend_cert_without_san.yml", true)
+			It("should fail if cert is empty", func() {
+				_, err := config.New("fixtures/no_frontend_certs.yml", false)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("frontend_tls[0].cert_chain must include a subjectAltName extension"))
-			})
-			It("should fail if certs or keys are empty", func() {
-				_, err := config.New("fixtures/no_frontend_certs.yml", true)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("frontend_tls[0] must include name, cert_chain, and private_key"))
-			})
-			It("should fail if cert is invalid", func() {
-				_, err := config.New("fixtures/invalid_frontend_certs.yml", true)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("failed to parse PEM block"))
+				Expect(err.Error()).To(Equal("frontend_tls[0]: empty cert_chain"))
 			})
 
+			It("should fail if key is missing", func() {
+				_, err := config.New("fixtures/invalid_frontend_key.yml", false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0]: empty private_key"))
+			})
+
+			It("should fail if name is missing", func() {
+				_, err := config.New("fixtures/invalid_frontend_name.yml", false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0]: empty name"))
+			})
+
+			It("should fail if cert is invalid", func() {
+				_, err := config.New("fixtures/invalid_frontend_certs.yml", false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0]: failed to parse PEM block"))
+			})
+
+			It("should fail if cert_chain is missing SAN information and DNSnames", func() {
+				_, err := config.New("fixtures/frontend_cert_without_san.yml", false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0]: cert_chain must include either a subjectAltName extension or DNSNames"))
+			})
+
+			It("should fail if cert_chain is invalid", func() {
+				_, err := config.New("fixtures/invalid_frontend_cert_certchain.yml", false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("frontend_tls[0]: could not parse certificate: x509: malformed certificate"))
+			})
 		})
 	})
-
 })
