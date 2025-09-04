@@ -1,3 +1,4 @@
+<% unless p("tcp_router.disable") %>
 global
     log 127.0.0.1   syslog info
     daemon
@@ -28,3 +29,4 @@ listen health_check_https_url
     bind :<%= p("tcp_router.tls_health_check_port") %> ssl crt /var/vcap/jobs/tcp_router/config/certs/health.pem
     monitor-uri /health
     monitor fail if { env(IS_DRAINING) -m str true }
+<% end %>

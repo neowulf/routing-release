@@ -1,5 +1,7 @@
+<% unless p("tcp_router.disable") %>
 check process tcp_router
   with pidfile /var/vcap/sys/run/bpm/tcp_router/tcp_router.pid
   start program "/var/vcap/jobs/bpm/bin/bpm start tcp_router"
   stop program "/var/vcap/jobs/bpm/bin/bpm stop tcp_router"
   group vcap
+<% end %>

@@ -3,7 +3,7 @@ name: tcp_router
 
 templates:
   tcp_router_ctl.erb: bin/tcp_router_ctl
-  haproxy_reloader: bin/haproxy_reloader
+  haproxy_reloader.erb: bin/haproxy_reloader
   bpm-pre-start.erb: bin/bpm-pre-start
   tcp_router.yml.erb: config/tcp_router.yml
   uaa_ca.crt.erb: config/certs/uaa/ca.crt
@@ -39,6 +39,9 @@ consumes:
     optional: true
 
 properties:
+  tcp_router.disable:
+    description: "Disable this monit job. It will not run."
+    default: false
   tcp_router.debug_address:
     description: "Address at which to serve debug info"
     default: "127.0.0.1:17002"

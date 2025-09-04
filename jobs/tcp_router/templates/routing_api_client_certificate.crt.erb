@@ -10,5 +10,7 @@
     raise RuntimeError, 'Routing API client certificate not found in properties nor in routing_api Link. This value can be specified using the routing_api.client_cert property.'
   end
 
-  client_cert
+  unless p("tcp_router.disable")
+    client_cert
+  end
 -%>

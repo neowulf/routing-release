@@ -22,6 +22,29 @@ describe 'tcp_router haproxy configs' do
     }
   end
 
+  describe 'bin/haproxy_reloader' do
+    context "bin/haproxy_reloader" do
+
+      let(:template) { tcp_router_job.template("bin/haproxy_reloader") }
+
+      it 'contains information' do
+        rendered_template = template.render(properties)
+        expect(rendered_template).to include("starting haproxy_reloader")
+      end
+
+      describe 'when tcp_router is disabled' do
+        before do
+          properties['tcp_router']['disable'] = true
+        end
+
+        it 'is empty' do
+          rendered_template = template.render(properties)
+          expect(rendered_template).to_not include("starting haproxy_reloader")
+        end
+      end
+    end
+  end
+
   ['haproxy.conf', 'haproxy.conf.template'].each do |file|
     context "config/#{file}" do
       let(:template) { tcp_router_job.template("config/#{file}") }
@@ -82,6 +105,16 @@ describe 'tcp_router haproxy configs' do
             expect(https_health_check).to include('bind :8443 ssl crt /var/vcap/jobs/tcp_router/config/certs/health.pem')
           end
         end
+      end
+
+      context 'when tcp_router is disabled' do
+          before do
+            properties['tcp_router']['disable'] = true
+          end
+
+          it 'is empty' do
+            expect(template.render(properties).strip.chomp).to eq("")
+          end
       end
     end
   end

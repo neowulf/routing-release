@@ -1,7 +1,7 @@
 #!/bin/bash
+<% unless p("tcp_router.disable") %>
 
 set -e
-
 # ignore the SIGUSR2 signal in case we were reconfiguring haproxy while a SIGUSR2 event came in,
 # we don't want to abort this process
 trap "echo Ignoring SIGUSR2" SIGUSR2
@@ -44,3 +44,4 @@ trap cleanup EXIT INT TERM
 "${DAEMON}" -f "${CONFIG}" -p "${HAPROXY_PID_FILE}" -x "${HAPROXY_SOCKET_FILE}" -D -sf "$(cat ${HAPROXY_PID_FILE})" 0<&- &>> "${LOGFILE}"
 
 echo "$(date --rfc-3339=ns) done" >> "${LOGFILE}"
+<% end %>

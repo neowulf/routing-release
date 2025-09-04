@@ -37,6 +37,126 @@ describe 'tcp_router' do
     }
   end
 
+  describe 'bin/bpm-pre-start' do
+    let(:template) { job.template('bin/bpm-pre-start') }
+
+    it 'contains haproxy.conf' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template).to include("haproxy.conf")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template).to_not include("tcp_router")
+      end
+    end
+  end
+
+  describe 'config/bpm.yml' do
+    let(:template) { job.template('config/bpm.yml') }
+
+    it 'contains information' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template).to include("tcp_router")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template).to_not include("tcp_router")
+      end
+    end
+  end
+
+  describe 'bin/drain' do
+    let(:template) { job.template('bin/drain') }
+
+    it 'contains information' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template).to include("triggering drain")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template).to_not include("triggering drain")
+      end
+    end
+  end
+
+  describe 'bin/post-start' do
+    let(:template) { job.template('bin/post-start') }
+
+    it 'contains information' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template).to include("post-start")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template).to_not include("post-start")
+      end
+    end
+  end
+
+  describe 'bin/pre-start' do
+    let(:template) { job.template('bin/pre-start') }
+
+    it 'contains information' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template.strip.chomp).to include("pre-start")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to_not include("pre-start")
+      end
+    end
+  end
+
+  describe 'bin/tcp_router_ctl' do
+    let(:template) { job.template('bin/tcp_router_ctl') }
+
+    it 'contains information' do
+      rendered_template = template.render(merged_manifest_properties)
+      expect(rendered_template.strip.chomp).to include("HAProxy is currently running")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to_not include("HAProxy is currently running")
+      end
+    end
+  end
+
   describe 'config/certs/health.pem' do
     let(:template) { job.template('config/certs/health.pem') }
     let(:links) do
@@ -59,7 +179,7 @@ describe 'tcp_router' do
 
     it 'should render the key + cert in a pem file' do
       rendered_template = template.render(merged_manifest_properties, consumes: links)
-      expect(rendered_template).to eq("tls health check key\ntls health check cert\n")
+      expect(rendered_template).to eq("\ntls health check key\ntls health check cert\n\n")
     end
 
     describe 'when tls_health_check_key is not provided' do
@@ -86,6 +206,16 @@ describe 'tcp_router' do
           RuntimeError,
           "Please set tcp_router.tls_health_check_cert in the tcp_router's job properties."
         )
+      end
+    end
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to eq("")
       end
     end
   end
@@ -144,6 +274,16 @@ describe 'tcp_router' do
         )
       end
     end
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to eq("")
+      end
+    end
   end
 
   describe 'config/keys/routing-api/client.key' do
@@ -198,6 +338,17 @@ describe 'tcp_router' do
           RuntimeError,
           'Routing API client private key not found in properties nor in routing_api Link. This value can be specified using the routing_api.client_private_key property.'
         )
+      end
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to eq("")
       end
     end
   end
@@ -260,21 +411,47 @@ describe 'tcp_router' do
 
   describe 'config/keys/tcp-router/client_cert_and_key.pem' do
     let(:template) { job.template('config/keys/tcp-router/backend/client_cert_and_key.pem') }
-
-    it 'renders the client cert + key in a single PEM file' do
+    before do
       merged_manifest_properties['tcp_router']['backend_tls']['client_cert'] = "the backend client cert"
       merged_manifest_properties['tcp_router']['backend_tls']['client_key'] = "the backend client key"
+    end
+
+    it 'renders the client cert + key in a single PEM file' do
       client_pem = template.render(merged_manifest_properties)
-      expect(client_pem).to eq("the backend client cert\nthe backend client key")
+      expect(client_pem).to eq("\nthe backend client cert\nthe backend client key\n")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to eq("")
+      end
     end
   end
 
   describe 'config/certs/tcp-router/ca.crt' do
     let(:template) { job.template('config/certs/tcp-router/backend/ca.crt') }
+    before do
+      merged_manifest_properties['tcp_router']['backend_tls']['ca_cert'] = "the backend ca cert"
+    end
 
     it 'renders the ca.crt' do
-      merged_manifest_properties['tcp_router']['backend_tls']['ca_cert'] = "the backend ca cert"
-      expect(template.render(merged_manifest_properties)).to eq('the backend ca cert')
+      expect(template.render(merged_manifest_properties)).to eq("\nthe backend ca cert\n")
+    end
+
+    describe 'when tcp_router is disabled' do
+      before do
+        merged_manifest_properties['tcp_router']['disable'] = true
+      end
+
+      it 'is empty' do
+        rendered_template = template.render(merged_manifest_properties)
+        expect(rendered_template.strip.chomp).to eq("")
+      end
     end
   end
 
@@ -549,6 +726,16 @@ describe 'tcp_router' do
               'tcp_router.backend_tls.enabled was set to true, but tcp_router.backend_tls.ca_cert was not provided',
             )
           end
+        end
+      end
+      describe 'when tcp_router is disabled' do
+        before do
+          merged_manifest_properties['tcp_router']['disable'] = true
+        end
+
+        it 'is empty' do
+          rendered_template = template.render(merged_manifest_properties)
+          expect(rendered_template.strip.chomp).to eq("")
         end
       end
     end

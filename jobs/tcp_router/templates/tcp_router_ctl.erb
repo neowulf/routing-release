@@ -1,7 +1,7 @@
 #!/bin/bash
+<% unless p("tcp_router.disable") %>
 
 set -eo pipefail
-
 CONF_DIR=/var/vcap/data/tcp_router/config
 HAPROXY_PID_FILE="${CONF_DIR}/haproxy.pid"
 PATH=/var/vcap/packages/haproxy/bin:$PATH
@@ -90,3 +90,5 @@ exec /var/vcap/packages/tcp_router/bin/cf-tcp-router\
 while kill -0 "$(cat ${HAPROXY_PID_FILE})"; do
   sleep 1
 done
+
+<% end %>

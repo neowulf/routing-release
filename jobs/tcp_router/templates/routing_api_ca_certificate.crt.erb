@@ -10,5 +10,7 @@
     raise RuntimeError, 'Routing API server ca certificate not found in properties nor in routing_api Link. This value can be specified using the routing_api.ca_cert property.'
   end
 
-  server_ca_cert
+  unless p("tcp_router.disable")
+    server_ca_cert
+  end
 -%>

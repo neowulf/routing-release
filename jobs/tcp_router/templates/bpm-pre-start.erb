@@ -1,4 +1,5 @@
 #!/bin/bash
+<% unless p("tcp_router.disable") %>
 
 set -eo pipefail
 
@@ -10,3 +11,4 @@ function copy_conf() {
 }
 
 copy_conf
+<% end %>

@@ -1,1 +1,3 @@
+<% unless p("tcp_router.disable") %>
 <%= p('tcp_router.backend_tls.ca_cert', "") -%>
+<% end %>

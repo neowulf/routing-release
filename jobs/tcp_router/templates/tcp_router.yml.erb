@@ -1,3 +1,4 @@
+<% unless p("tcp_router.disable") %>
 <%
 
 def routing_api_port
@@ -104,3 +105,4 @@ frontend_tls:
     private_key: |
 <%= cert_pair['private_key'].to_s.lines.map { |line| "      #{line.rstrip}" }.join("\n") %>
 <% end -%>
+<% end %>

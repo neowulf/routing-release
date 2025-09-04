@@ -24,5 +24,7 @@ bpm = {
   ]
 }
 
-YAML.dump(bpm)
+unless p("tcp_router.disable")
+  YAML.dump(bpm)
+end
 %>
