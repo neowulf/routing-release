@@ -1,7 +1,10 @@
 #!/bin/bash
 # vim: set ft=sh
 set -e
-<% unless p("tcp_router.disable") %>
+<% if  p("tcp_router.disable") %>
+echo 0
+exit 0
+<% else %>
 
 pidfile=/var/vcap/sys/run/bpm/tcp_router/tcp_router.pid
 log_file=/var/vcap/sys/log/tcp_router/drain.log
@@ -33,5 +36,4 @@ else
   rm ${pidfile}
   echo 0
 fi
-
 <% end %>
