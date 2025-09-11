@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -721,7 +722,7 @@ var _ = Describe("Router", func() {
 			return appRegistered(registry, app)
 		}).Should(BeTrue())
 
-		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", config.Ip, config.Port))
+		conn, err := net.Dial("tcp", net.JoinHostPort(config.Ip, strconv.FormatInt(int64(config.Port), 10)))
 		Expect(err).NotTo(HaveOccurred())
 		defer conn.Close()
 

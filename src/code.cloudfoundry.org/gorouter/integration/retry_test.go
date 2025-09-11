@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -54,7 +55,7 @@ var _ = Describe("Retries", func() {
 		})
 
 		It("does not prune the endpoint on context cancelled", func() {
-			conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", appURL, testState.cfg.Port))
+			conn, err := net.Dial("tcp", net.JoinHostPort(appURL, strconv.FormatInt(int64(testState.cfg.Port), 10)))
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = conn.Write([]byte(fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\n\r\n", appURL)))
