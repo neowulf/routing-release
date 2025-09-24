@@ -402,7 +402,7 @@ func startNatsTLS(host string, port uint16, caFile, certFile, keyFile string) *e
 	natsTimeout := 10 * time.Second
 	natsPollingInterval := 20 * time.Millisecond
 	Eventually(func() error {
-		_, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		_, err := net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", port)))
 		return err
 	}, natsTimeout, natsPollingInterval).Should(Succeed())
 

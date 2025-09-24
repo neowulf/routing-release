@@ -484,7 +484,7 @@ func startNats(host string, port int, username, password string) *exec.Cmd {
 	natsTimeout := 10 * time.Second
 	natsPollingInterval := 20 * time.Millisecond
 	Eventually(func() error {
-		_, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		_, err := net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", port)))
 		return err
 	}, natsTimeout, natsPollingInterval).Should(Succeed())
 
@@ -519,7 +519,7 @@ func startNatsTls(host string, port int, caFile, certFile, keyFile, username, pa
 	natsTimeout := 10 * time.Second
 	natsPollingInterval := 20 * time.Millisecond
 	Eventually(func() error {
-		_, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		_, err := net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", port)))
 		return err
 	}, natsTimeout, natsPollingInterval).Should(Succeed())
 

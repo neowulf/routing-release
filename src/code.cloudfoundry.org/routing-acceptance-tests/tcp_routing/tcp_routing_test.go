@@ -260,7 +260,7 @@ func getServerResponse(addr string, externalPort uint16) (string, error) {
 }
 
 func sendAndReceive(addr string, externalPort uint16) (string, error) {
-	address := fmt.Sprintf("%s:%d", addr, externalPort)
+	address := net.JoinHostPort(addr, fmt.Sprintf("%d", externalPort))
 
 	conn, err := net.DialTimeout(CONN_TYPE, address, DEFAULT_CONNECT_TIMEOUT)
 	if err != nil {

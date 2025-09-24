@@ -80,7 +80,7 @@ func curlAppSuccess(domainName, port string) {
 }
 
 func curlAppFailure(domainName, port string) {
-	appUrl := fmt.Sprintf("%s:%s", domainName, port)
+	appUrl := net.JoinHostPort(domainName, port)
 
 	dialTCP := func(url string, connFailed chan struct{}) {
 		fmt.Fprintf(GinkgoWriter, "\nConnecting to URL %s... \n", appUrl)
