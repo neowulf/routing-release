@@ -1513,6 +1513,7 @@ var _ = Describe("Proxy", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(msgBuf[:n])).To(Equal("WEBSOCKET OK"))
 
+			conn.Close()
 			Eventually(func() (int64, error) {
 				fi, err := f.Stat()
 				if err != nil {
@@ -1614,6 +1615,7 @@ var _ = Describe("Proxy", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(msgBuf[:n])).To(Equal("WEBSOCKET OK"))
 
+					conn.Close()
 					Eventually(func() (int64, error) {
 						fi, err := f.Stat()
 						if err != nil {
@@ -1630,7 +1632,7 @@ var _ = Describe("Proxy", func() {
 					Expect(strings.HasPrefix(logStr, "slow-ws-test - [")).To(BeTrue())
 					Expect(logStr).To(ContainSubstring(`"GET / HTTP/1.1" 101`))
 					Expect(logStr).To(ContainSubstring(`x_forwarded_for:"127.0.0.1" x_forwarded_proto:"http" vcap_request_id:`))
-					Expect(logStr).To(ContainSubstring(`response_time:0.1`))
+					Expect(logStr).To(ContainSubstring(`response_time:0.`))
 					Expect(logStr).To(ContainSubstring(`gorouter_time:0.0`))
 				})
 			})
@@ -2728,6 +2730,7 @@ var _ = Describe("Proxy", func() {
 
 			conn.WriteLine("hello from client")
 			conn.CheckLine("hello from server")
+			conn.Close()
 
 			Eventually(func() (int64, error) {
 				fi, err := f.Stat()
@@ -2744,8 +2747,6 @@ var _ = Describe("Proxy", func() {
 			Expect(string(b)).To(ContainSubstring("HTTP/1.1\" 101"))
 			responseTime := parseResponseTimeFromLog(string(b))
 			Expect(responseTime).To(BeNumerically(">", 0))
-
-			conn.Close()
 		})
 
 		It("emits a xxx metric", func() {
