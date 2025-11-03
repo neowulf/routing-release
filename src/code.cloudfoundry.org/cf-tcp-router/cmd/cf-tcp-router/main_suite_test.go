@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"code.cloudfoundry.org/cf-tcp-router/config"
 	"code.cloudfoundry.org/cf-tcp-router/testutil"
 	"code.cloudfoundry.org/cf-tcp-router/utils"
+	"code.cloudfoundry.org/diego-logging-client/testhelpers"
 	"code.cloudfoundry.org/localip"
 	locket_config "code.cloudfoundry.org/locket/cmd/locket/config"
 	"code.cloudfoundry.org/locket/cmd/locket/testrunner"
@@ -59,8 +61,12 @@ var (
 	routingAPIClientCertPath       string
 	routingAPIClientPrivateKeyPath string
 
-	longRunningProcessPidFile string
-	catCmd                    *exec.Cmd
+	longRunningProcessPidFile                               string
+	catCmd                                                  *exec.Cmd
+	testIngressServer                                       *testhelpers.TestIngressServer
+	signalMetricsChan                                       chan struct{}
+	metronCAFile, metronServerCertFile, metronServerKeyFile string
+	metricsPort                                             int
 )
 
 func nextAvailPort() uint16 {
@@ -143,6 +149,21 @@ func killLongRunningProcess() {
 }
 
 var _ = BeforeEach(func() {
+
+	fixturesPath := "fixtures"
+
+	var err error
+	metronCAFile = filepath.Join(fixturesPath, "metron", "CA.crt")
+	metronServerCertFile = filepath.Join(fixturesPath, "metron", "metron.crt")
+	metronServerKeyFile = filepath.Join(fixturesPath, "metron", "metron.key")
+	testIngressServer, err = testhelpers.NewTestIngressServer(metronServerCertFile, metronServerKeyFile, metronCAFile)
+	Expect(err).NotTo(HaveOccurred())
+	receiversChan := testIngressServer.Receivers()
+	testIngressServer.Start()
+	metricsPort, _ = testIngressServer.Port()
+
+	_, signalMetricsChan = testhelpers.TestMetricChan(receiversChan)
+
 	setupLocket()
 
 	randomFileName := testutil.RandomFileName("haproxy_", ".cfg")
@@ -152,7 +173,7 @@ var _ = BeforeEach(func() {
 	haproxyConfigBackupFile = path.Join(os.TempDir(), randomBackupFileName)
 	haproxyBaseConfigFile = path.Join(os.TempDir(), randomBaseFileName)
 
-	err := utils.WriteToFile(
+	err = utils.WriteToFile(
 		[]byte(
 			`global maxconn 4096
 defaults
@@ -215,6 +236,9 @@ var _ = AfterEach(func() {
 	teardownLocket()
 	dbAllocator.Reset()
 	locketDBAllocator.Reset()
+
+	testIngressServer.Stop()
+	close(signalMetricsChan)
 	killLongRunningProcess()
 })
 
@@ -236,6 +260,10 @@ func setupLocket() {
 			c.DatabaseDriver = "mysql"
 		}
 		c.ListenAddress = fmt.Sprintf("localhost:%d", locketPort)
+		c.LoggregatorConfig.APIPort, _ = testIngressServer.Port()
+		c.LoggregatorConfig.CACertPath = metronCAFile
+		c.LoggregatorConfig.CertPath = metronServerCertFile
+		c.LoggregatorConfig.KeyPath = metronServerKeyFile
 	})
 	locketProcess = ginkgomon.Invoke(locketRunner)
 }
