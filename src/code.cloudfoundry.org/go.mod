@@ -9,15 +9,15 @@ replace github.com/cactus/go-statsd-client => github.com/cactus/go-statsd-client
 require (
 	code.cloudfoundry.org/cfhttp/v2 v2.63.0
 	code.cloudfoundry.org/clock v1.55.0
-	code.cloudfoundry.org/debugserver v0.76.0
-	code.cloudfoundry.org/diego-logging-client v0.80.0
+	code.cloudfoundry.org/debugserver v0.77.0
+	code.cloudfoundry.org/diego-logging-client v0.81.0
 	code.cloudfoundry.org/eventhub v0.58.0
 	code.cloudfoundry.org/go-loggregator/v9 v9.2.1
-	code.cloudfoundry.org/go-metric-registry v0.0.0-20251117163425-cf365769e5e5
+	code.cloudfoundry.org/go-metric-registry v0.0.0-20251126124006-751f54e6f9aa
 	code.cloudfoundry.org/lager/v3 v3.55.0
 	code.cloudfoundry.org/localip v0.57.0
 	code.cloudfoundry.org/locket v0.0.0-20251117222557-be612341b29d
-	code.cloudfoundry.org/tlsconfig v0.40.0
+	code.cloudfoundry.org/tlsconfig v0.41.0
 	github.com/armon/go-proxyproto v0.1.0
 	github.com/cactus/go-statsd-client v3.2.1+incompatible
 	github.com/cloudfoundry-community/go-uaa v0.3.5
@@ -106,6 +106,6 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
